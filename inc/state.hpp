@@ -1,0 +1,27 @@
+#ifndef STATE_INCLUDED
+	enum mesherState{
+		STATE_VERTS,
+		STATE_TRIS,
+		STATE_V_UVS,
+		STATE_V_COLORS,
+		STATE_V_BONES,
+		STATE_LAYERS,
+		STATE_BONES,
+		STATE_POSE,
+		STATE_CONSOLE,
+		
+		STATE_COUNT,
+		
+		STATE_ATOP_TRI_ADD,
+		STATE_ATOP_TRANSFORM,
+		STATE_ATOP_COLOR_SET,
+		STATE_ATOP_GRID_SET,
+		STATE_ATOP_LAYER_NAME,
+		
+		TOTAL_STATE_COUNT
+	};
+	
+	bool stateIsTextual(enum mesherState state);
+	
+	#define STATE_INCLUDED
+#endif
