@@ -49,20 +49,15 @@
 		void drawBottomBar(const std::string &line,bool snapOn,bool showTris,unsigned char currTri);
 		void drawLayerNav(std::vector<class vertLayer *> &layers,unsigned int currLayer,const char *altCurrLayerName,class gridLayer *grid,const char *altGridDisplay);
 		void drawCustomColorsReff(unsigned char currColor,const char *altCurrColorHex);
-		void drawBonesReff(unsigned char currBone);
+		void drawVBonesReff(unsigned char currBone);
+		void drawBonesReff(unsigned char currBone,const char *altCurrBoneParent);
 		
 		// Drawing Dynamic Model-State-Dependant UI
-		enum markType{
-			MARK_CIRCLE,
-			MARK_RHOMBUS,
-			MARK_SQUARE,
-			MARK_TRIANGLE,
-			
-			MARK_COUNT
-		};
-		
-		void drawMark(enum markType type,int16_t x,int16_t y,bool isScaleNorm,float scale,uint32_t color);
+		void drawCircle(int16_t x,int16_t y,bool isRadNorm,float radius,uint32_t color);
 		void drawCircleOutline(int16_t x,int16_t y,bool isRadNorm,float radius,uint32_t color);
+		
+		void drawMark(unsigned int i,int16_t x,int16_t y,bool isScaleNorm,float scale);
+		void drawStem(unsigned int i,int16_t srcX,int16_t srcY,int16_t destX,int16_t destY);
 		
 		enum lineType{
 			LINE_VERTICAL,

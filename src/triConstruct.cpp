@@ -96,7 +96,7 @@ namespace triCn{
 		
 		// Draw vertices placed
 		for(unsigned int i = 0;i <= vertCount;++i){
-			hud::drawMark(hud::MARK_CIRCLE,CONSTRUCT_X(i),CONSTRUCT_Y(i),false,POINT_RADIUS,clr::get(clr::PFL_EDITR,CLR_EDITR_OFFWHITE,clr::ALF_HALF));
+			hud::drawCircle(CONSTRUCT_X(i),CONSTRUCT_Y(i),false,POINT_RADIUS,clr::get(clr::PFL_EDITR,CLR_EDITR_OFFWHITE,clr::ALF_HALF));
 		}
 	}
 }

@@ -187,15 +187,14 @@ namespace trOp{
 		switch(op){
 			case TROP_TRANSLATE:
 				// Handle
-				hud::drawMark(hud::MARK_CIRCLE,lastX,lastY,false,POINT_RADIUS_AURA,clr::get(clr::PFL_EDITR,CLR_EDITR_HICONTRAST,clr::ALF_UTIL));
+				hud::drawCircle(lastX,lastY,false,POINT_RADIUS_AURA,clr::get(clr::PFL_EDITR,CLR_EDITR_HICONTRAST,clr::ALF_UTIL));
 				
 				break;
 			case TROP_ROTATE:
 				switch(opState){
 					case TROP_STATE_UPDATE:
 						// Background circle
-						hud::drawMark(
-							hud::MARK_CIRCLE,
+						hud::drawCircle(
 							srcX,
 							srcY,
 							true,
@@ -204,14 +203,13 @@ namespace trOp{
 						);
 						
 						// Source circle
-						hud::drawMark(hud::MARK_CIRCLE,srcX,srcY,false,POINT_RADIUS,clr::get(clr::PFL_EDITR,CLR_EDITR_OFFWHITE,clr::ALF_HALF));
+						hud::drawCircle(srcX,srcY,false,POINT_RADIUS,clr::get(clr::PFL_EDITR,CLR_EDITR_OFFWHITE,clr::ALF_HALF));
 						
 						// Handle circle
-						hud::drawMark(hud::MARK_CIRCLE,handleX,handleY,false,POINT_RADIUS,clr::get(clr::PFL_EDITR,CLR_EDITR_OFFWHITE,clr::ALF_HALF));
+						hud::drawCircle(handleX,handleY,false,POINT_RADIUS,clr::get(clr::PFL_EDITR,CLR_EDITR_OFFWHITE,clr::ALF_HALF));
 						
 						// Current angle circle
-						hud::drawMark(
-							hud::MARK_CIRCLE,
+						hud::drawCircle(
 							(float)srcX + distLX() * (distHLen() / distLLen()),
 							(float)srcY + distLY() * (distHLen() / distLLen()),
 							false,
@@ -222,8 +220,7 @@ namespace trOp{
 						break;
 					case TROP_STATE_PRIME:
 						// WIP handle circle
-						hud::drawMark(
-							hud::MARK_CIRCLE,
+						hud::drawCircle(
 							srcX,
 							srcY,
 							true,
@@ -232,7 +229,7 @@ namespace trOp{
 						);
 						
 						// Source circle
-						hud::drawMark(hud::MARK_CIRCLE,srcX,srcY,false,POINT_RADIUS,clr::get(clr::PFL_EDITR,CLR_EDITR_OFFWHITE,clr::ALF_HALF));
+						hud::drawCircle(srcX,srcY,false,POINT_RADIUS,clr::get(clr::PFL_EDITR,CLR_EDITR_OFFWHITE,clr::ALF_HALF));
 						
 						break;
 					case TROP_STATE_NONE:
@@ -244,14 +241,14 @@ namespace trOp{
 				switch(opState){
 					case TROP_STATE_UPDATE:
 						// Handle circle
-						hud::drawMark(hud::MARK_CIRCLE,srcX,srcY,true,distHLen() / (float)INT16_MAX,clr::get(clr::PFL_EDITR,CLR_EDITR_HICONTRAST,clr::ALF_UTIL));
+						hud::drawCircle(srcX,srcY,true,distHLen() / (float)INT16_MAX,clr::get(clr::PFL_EDITR,CLR_EDITR_HICONTRAST,clr::ALF_UTIL));
 						
 					case TROP_STATE_PRIME:
 						// WIP circle - handle / current scale factor
-						hud::drawMark(hud::MARK_CIRCLE,srcX,srcY,true,distLLen() / (float)INT16_MAX,clr::get(clr::PFL_EDITR,CLR_EDITR_HICONTRAST,clr::ALF_UTIL));
+						hud::drawCircle(srcX,srcY,true,distLLen() / (float)INT16_MAX,clr::get(clr::PFL_EDITR,CLR_EDITR_HICONTRAST,clr::ALF_UTIL));
 						
 						// Source circle
-						hud::drawMark(hud::MARK_CIRCLE,srcX,srcY,false,POINT_RADIUS,clr::get(clr::PFL_EDITR,CLR_EDITR_OFFWHITE,clr::ALF_HALF));
+						hud::drawCircle(srcX,srcY,false,POINT_RADIUS,clr::get(clr::PFL_EDITR,CLR_EDITR_OFFWHITE,clr::ALF_HALF));
 						
 						break;
 					case TROP_STATE_NONE:

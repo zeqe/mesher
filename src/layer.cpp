@@ -384,7 +384,7 @@ void vertLayer::draw(bool wireframe,bool showNearestPoint){
 	
 	// Draw nearest vertex -------------------------------------------
 	if(showNearestPoint && nearVert != NO_NEAR_ELMNT){
-		hud::drawMark(hud::MARK_CIRCLE,nearestPoint_X(),nearestPoint_Y(),false,POINT_RADIUS_AURA,clr::get(clr::PFL_EDITR,CLR_EDITR_OFFWHITE,clr::ALF_HALF));
+		hud::drawCircle(nearestPoint_X(),nearestPoint_Y(),false,POINT_RADIUS_AURA,clr::get(clr::PFL_EDITR,CLR_EDITR_OFFWHITE,clr::ALF_HALF));
 	}
 	
 	// Draw vertices -------------------------------------------
@@ -405,17 +405,14 @@ void vertLayer::draw(bool wireframe,bool showNearestPoint){
 		}
 		
 		// Drawing
-		uint32_t color;
-		enum hud::markType marker = hud::MARK_CIRCLE;
-		
 		switch(currentView){
 			case VIEW_XY:
 			case VIEW_UV:
 				if(selVerts[i]){
-					color = clr::get(clr::PFL_EDITR,CLR_EDITR_HILIGHT,clr::ALF_HALF);
+					hud::drawCircle(drawX,drawY,false,POINT_RADIUS,clr::get(clr::PFL_EDITR,CLR_EDITR_HILIGHT,clr::ALF_HALF));
 					
 				}else if(VERT_TYPE(&buffer,i) == TRI_TYPE_CONVEX && (i % 3) == 0){
-					color = clr::get(clr::PFL_EDITR,CLR_EDITR_OFFWHITE,clr::ALF_HALF);
+					hud::drawCircle(drawX,drawY,false,POINT_RADIUS,clr::get(clr::PFL_EDITR,CLR_EDITR_OFFWHITE,clr::ALF_HALF));
 					
 				}else{
 					continue;
@@ -423,18 +420,14 @@ void vertLayer::draw(bool wireframe,bool showNearestPoint){
 				
 				break;
 			case VIEW_COLORS:
-				color = clr::get(clr::PFL_RANBW,VERT_COLOR(&buffer,i) % CLR_RANBW_COUNT,clr::ALF_HALF);
-				marker = (enum hud::markType)(VERT_COLOR(&buffer,i) / CLR_RANBW_COUNT);
+				hud::drawMark(VERT_COLOR(&buffer,i),drawX,drawY,false,POINT_RADIUS);
 				
 				break;
 			case VIEW_BONES:
-				color = clr::get(clr::PFL_RANBW,VERT_BONE(&buffer,i) % CLR_RANBW_COUNT,clr::ALF_HALF);
-				marker = (enum hud::markType)(VERT_BONE(&buffer,i) / CLR_RANBW_COUNT);
+				hud::drawMark(VERT_BONE(&buffer,i),drawX,drawY,false,POINT_RADIUS);
 				
 				break;
 		}
-		
-		hud::drawMark(marker,drawX,drawY,false,POINT_RADIUS,color);
 	}
 }
 

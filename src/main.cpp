@@ -26,6 +26,7 @@ extern "C" {
 #include "stringInput.hpp"
 #include "triConstruct.hpp"
 #include "transformOp.hpp"
+#include "skeleton.hpp"
 
 enum keyInput{
 	KEY_ESC,
@@ -203,6 +204,8 @@ int main(){
 	clrCstm::init();
 	render::setColors(clr::PFL_EDITR,clr::PFL_EDITR_SOL);
 	
+	bones::init();
+	
 	// View ------------------------------------------------
 	window.setView(sf::View(sf::Vector2f(0.0,0.0),sf::Vector2f(WIN_INIT_WIDTH,WIN_INIT_HEIGHT)));
 	vw::reset(true);
@@ -228,6 +231,8 @@ int main(){
 	
 	unsigned char currClr = 0;
 	unsigned char currBone = 0;
+	
+	int tempInt;
 	
 	// Loop & Loop State -----------------------------------
 	bool run = true;
@@ -256,6 +261,10 @@ int main(){
 			}
 		}
 		
+		if(state == STATE_BONES || state == STATE_ATOP_BONE_PARENT_SET){
+			bones::draw();
+		}
+		
 		// HUD
 		trOp::drawUI();
 		
@@ -280,12 +289,23 @@ int main(){
 			);
 		}
 		
-		if(state == STATE_V_COLORS || state == STATE_ATOP_COLOR_SET){
-			hud::drawCustomColorsReff(currClr,state == STATE_ATOP_COLOR_SET ? strIn::buffer() : NULL);
-		}
-		
-		if(state == STATE_V_BONES){
-			hud::drawBonesReff(currBone);
+		switch(state){
+			case STATE_V_COLORS:
+			case STATE_ATOP_COLOR_SET:
+				hud::drawCustomColorsReff(currClr,state == STATE_ATOP_COLOR_SET ? strIn::buffer() : NULL);
+				
+				break;
+			case STATE_V_BONES:
+				hud::drawVBonesReff(currBone);
+				
+				break;
+			case STATE_BONES:
+			case STATE_ATOP_BONE_PARENT_SET:
+				hud::drawBonesReff(currBone,state == STATE_ATOP_BONE_PARENT_SET ? strIn::buffer() : NULL);
+				
+				break;
+			default:
+				break;
 		}
 		
 		hud::drawBottomBar(std::string(textBuffer),snap,state == STATE_ATOP_TRI_ADD,triType);
@@ -472,6 +492,8 @@ int main(){
 							break;
 						case STATED_KI(STATE_V_BONES,0,0,0,KEY_UP):
 						case STATED_KI(STATE_V_BONES,0,0,0,KEY_DOWN):
+						case STATED_KI(STATE_BONES,0,0,0,KEY_UP):
+						case STATED_KI(STATE_BONES,0,0,0,KEY_DOWN):
 							currBone = (BONES_MAX_COUNT + currBone - (keyIn == KEY_UP) + (keyIn == KEY_DOWN)) % BONES_MAX_COUNT;
 							
 							break;
@@ -529,6 +551,15 @@ int main(){
 							state = STATE_ATOP_LAYER_NAME;
 							
 							break;
+						case STATED_KI(STATE_BONES,0,1,0,KEY_S):
+							strIn::activate(2);
+							state = STATE_ATOP_BONE_PARENT_SET;
+							
+							break;
+						case STATED_KI(STATE_BONES,0,1,0,KEY_C):
+							bones::setParent(currBone,BONES_MAX_COUNT);
+							
+							break;
 						case STATED_KI(STATE_ATOP_TRI_ADD,0,0,0,KEY_ESC):
 							state = STATE_VERTS;
 							
@@ -554,6 +585,11 @@ int main(){
 						case STATED_KI(STATE_ATOP_LAYER_NAME,0,0,0,KEY_ESC):
 							strIn::deactivate();
 							state = STATE_LAYERS;
+							
+							break;
+						case STATED_KI(STATE_ATOP_BONE_PARENT_SET,0,0,0,KEY_ESC):
+							strIn::deactivate();
+							state = STATE_BONES;
 							
 							break;
 						default:
@@ -593,6 +629,17 @@ int main(){
 								strIn::deactivate();
 								
 								state = STATE_LAYERS;
+							}
+							
+							break;
+						case STATE_ATOP_BONE_PARENT_SET:
+							if(strIn::interpret(event.text.unicode)){
+								tempInt = atoi(strIn::buffer());
+								bones::setParent(currBone,tempInt < BONES_MAX_COUNT ? tempInt : BONES_MAX_COUNT);
+								
+								strIn::deactivate();
+								
+								state = STATE_BONES;
 							}
 							
 							break;
@@ -657,6 +704,14 @@ int main(){
 									if(currLayerValid()){
 										layers[currLayer]->nearVert_SetBone(currBone);
 									}
+									
+									break;
+								case STATE_BONES:
+									if(!isAltDown){
+										break;
+									}
+									
+									bones::setOrigin(currBone,iX,iY);
 									
 									break;
 								case STATE_ATOP_TRI_ADD:

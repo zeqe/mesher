@@ -13,9 +13,13 @@ extern "C" {
 #include "graphics.hpp"
 #include "view.hpp"
 #include "colorsCustom.hpp"
+#include "geometry.hpp"
+#include "skeleton.hpp"
 
 #define STRINGIFY_DEEP(M) #M
 #define STRINGIFY(M) STRINGIFY_DEEP(M)
+
+#define PI 3.14159265358979323846
 
 // Shader customization
 const char SHADER_VERT_CASES[] =
@@ -48,12 +52,23 @@ float charWidth,charHeight,charVDiff;
 char textBuffer[50];
 
 // Shapes
+enum markType{
+	MARK_CIRCLE,
+	MARK_RHOMBUS,
+	MARK_SQUARE,
+	MARK_TRIANGLE,
+	
+	MARK_COUNT
+};
+
 sf::RectangleShape center,vLine,hLine;
 sf::RectangleShape hudBack,hudHilight,colorBack;
 
 sf::CircleShape circle,circleOutline;
 sf::ConvexShape triangle,rhombus,square;
-sf::Shape *marks[hud::MARK_COUNT + 1];
+sf::Shape *marks[MARK_COUNT];
+
+sf::ConvexShape stem;
 
 #define CENTER_DIM 15.0
 #define LINE_WIDTH 2.0
@@ -91,7 +106,8 @@ const std::string mesherStateTitles[TOTAL_STATE_COUNT] = {
 	"<Transform>", // STATE_ATOP_TRANSFORM
 	"<Color Set>", // STATE_ATOP_COLOR_SET
 	"<Grid Set>", // STATE_ATOP_GRID_SET
-	"<Layer Name>" // STATE_ATOP_LAYER_NAME
+	"<Layer Name>", // STATE_ATOP_LAYER_NAME
+	"<Bone Parent Set>" // STATE_ATOP_BONE_PARENT_SET
 };
 
 std::string mesherHelpTitleUnderline = std::string(40,' ');
@@ -229,8 +245,6 @@ namespace graphics{
 		
 		// Markers: shapes whose areas are same as a unit circle of radius 1
 		// Except for the triangle, which was artificially scaled by a factor to reduce apparant size
-		float pi = 3.14159265358979323846;
-		
 		circle.setPointCount(64);
 		circle.setRadius(1.0);
 		circle.setOrigin(sf::Vector2f(1.0,1.0));
@@ -240,15 +254,15 @@ namespace graphics{
 		circleOutline.setOutlineThickness(LINE_WIDTH);
 		
 		float triangleScalar = 5.0 / 6.0;
-		float triangleHalfHeight = triangleScalar * sqrt(sqrt(3) * pi) / 2.0;
-		float triangleHalfBase = triangleScalar * sqrt(pi / sqrt(3));
+		float triangleHalfHeight = triangleScalar * sqrt(sqrt(3) * PI) / 2.0;
+		float triangleHalfBase = triangleScalar * sqrt(PI / sqrt(3));
 		
 		triangle.setPointCount(3);
 		triangle.setPoint(0,sf::Vector2f(0.0,-triangleHalfHeight));
 		triangle.setPoint(1,sf::Vector2f(-triangleHalfBase,triangleHalfHeight));
 		triangle.setPoint(2,sf::Vector2f(triangleHalfBase,triangleHalfHeight));
 		
-		float rhombusInnerHypotenuse = sqrt(pi / 2.0);
+		float rhombusInnerHypotenuse = sqrt(PI / 2.0);
 		
 		rhombus.setPointCount(4);
 		rhombus.setPoint(0,sf::Vector2f(0.0,-rhombusInnerHypotenuse));
@@ -256,7 +270,7 @@ namespace graphics{
 		rhombus.setPoint(2,sf::Vector2f(0.0,rhombusInnerHypotenuse));
 		rhombus.setPoint(3,sf::Vector2f(-rhombusInnerHypotenuse,0.0));
 		
-		float squareHalfSide = sqrt(pi) / 2.0;
+		float squareHalfSide = sqrt(PI) / 2.0;
 		
 		square.setPointCount(4);
 		square.setPoint(0,sf::Vector2f(squareHalfSide,-squareHalfSide));
@@ -265,11 +279,17 @@ namespace graphics{
 		square.setPoint(3,sf::Vector2f(-squareHalfSide,-squareHalfSide));
 		
 		// Setting mark pointers
-		marks[hud::MARK_CIRCLE] = &circle;
-		marks[hud::MARK_RHOMBUS] = &rhombus;
-		marks[hud::MARK_SQUARE] = &square;
-		marks[hud::MARK_TRIANGLE] = &triangle;
-		marks[hud::MARK_COUNT] = &circle;
+		marks[MARK_CIRCLE] = &circle;
+		marks[MARK_RHOMBUS] = &rhombus;
+		marks[MARK_SQUARE] = &square;
+		marks[MARK_TRIANGLE] = &triangle;
+		
+		// Stem
+		stem.setPointCount(4);
+		stem.setPoint(0,sf::Vector2f(0.0,0.0));
+		stem.setPoint(1,sf::Vector2f(0.1,1.25 * POINT_RADIUS));
+		stem.setPoint(2,sf::Vector2f(1.0,0.0));
+		stem.setPoint(3,sf::Vector2f(0.1,-1.25 * POINT_RADIUS));
 		
 		// Help string dimensions
 		for(unsigned int i = 0;i < 4;++i){
@@ -389,7 +409,7 @@ namespace render{
 }
 
 namespace hud{
-	// Position ----------------------------------------------------------------------------------------------------------------------------------------------------
+	// Datums ----------------------------------------------------------------------------------------------------------------------------------------------------
 	sf::Vector2f charPosition(enum corner c,float x,float y){
 		float newX,newY;
 		
@@ -416,6 +436,14 @@ namespace hud{
 		}
 		
 		return sf::Vector2f(newX,newY);
+	}
+	
+	uint32_t markColor(unsigned int i,enum clr::alpha alf){
+		return clr::get(clr::PFL_RANBW,i % CLR_RANBW_COUNT,alf);
+	}
+	
+	enum markType markShape(unsigned int i){
+		return (enum markType)((i / CLR_RANBW_COUNT) % MARK_COUNT);
 	}
 	
 	// Drawing ----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -711,18 +739,73 @@ namespace hud{
 			}
 			
 			// Mark
-			drawn = marks[(i / CLR_RANBW_COUNT) % MARK_COUNT];
-			drawn->setFillColor(sf::Color(clr::get(clr::PFL_RANBW,i % CLR_RANBW_COUNT,clr::ALF_ONE)));
+			drawn = marks[markShape(i)];
+			drawn->setFillColor(sf::Color(markColor(i,clr::ALF_ONE)));
 			target->draw(*drawn,sf::RenderStates(sf::Transform().translate(charPosition(cBR,COLREFF_ICX(i) + 10.5,COLREFF_ICY(i) + 0.5))));
 		}
 	}
 	
-	void drawBonesReff(unsigned char currBone){
+	void drawVBonesReff(unsigned char currBone){
+		#define VBNEREFF_CHLPAD 1
+		#define VBNEREFF_CHRPAD 2
+		#define VBNEREFF_CVPAD 1.5
+		
+		#define VBNEREFF_ICWIDTH 7
+		
+		#define VBNEREFF_IHEIGHT (CLR_RANBW_COUNT * 2)
+		#define VBNEREFF_IWIDTH (BONES_MAX_COUNT / VBNEREFF_IHEIGHT)
+		
+		#define VBNEREFF_CHEIGHT (VBNEREFF_IHEIGHT + (VBNEREFF_CVPAD * 2.0))
+		#define VBNEREFF_CWIDTH ((VBNEREFF_ICWIDTH * VBNEREFF_IWIDTH) + VBNEREFF_CHLPAD + VBNEREFF_CHRPAD)
+		
+		#define VBNEREFF_CTOP (VBNEREFF_CHEIGHT + 2.0)
+		
+		#define VBNEREFF_ICX(i) (VBNEREFF_CWIDTH - VBNEREFF_CHLPAD - (VBNEREFF_ICWIDTH * ((i / VBNEREFF_IHEIGHT) + 1)))
+		#define VBNEREFF_ICY(i) (VBNEREFF_CTOP - VBNEREFF_CVPAD - (i % VBNEREFF_IHEIGHT) - 1.0)
+		
+		// Background
+		hudBack.setPosition(charPosition(cBR,VBNEREFF_CWIDTH,VBNEREFF_CTOP));
+		hudBack.setSize(sf::Vector2f(VBNEREFF_CWIDTH * charWidth,VBNEREFF_CHEIGHT * charHeight));
+		target->draw(hudBack);
+		
+		// Items
+		for(unsigned int i = 0;i < MARK_COUNT;++i){
+			marks[i]->setScale(POINT_RADIUS,POINT_RADIUS);
+		}
+		
+		sf::Shape *drawn;
+		unsigned char currI = currBone & BONE_INDEX_MASK;
+		
+		for(unsigned int i = 0;i < BONES_MAX_COUNT;++i){
+			// Current Bone Highlight
+			if(i == currI){
+				colorBack.setPosition(charPosition(cBR,VBNEREFF_ICX(i) + 6,VBNEREFF_ICY(i) + 1.0));
+				colorBack.setSize(sf::Vector2f(4.5 * charWidth,charHeight));
+				colorBack.setFillColor(sf::Color(0xffffffff));
+				target->draw(colorBack);
+			}
+			
+			// Bone ID
+			sprintf(textBuffer,"%2d",i);
+			
+			hudText.setString(std::string(textBuffer));
+			hudText.setPosition(charPosition(cBR,VBNEREFF_ICX(i) + 5,VBNEREFF_ICY(i)));
+			hudText.setFillColor(sf::Color(i == currI ? 0x000000ff : 0xffffffff));
+			target->draw(hudText);
+			
+			// Mark
+			drawn = marks[markShape(i)];
+			drawn->setFillColor(sf::Color(markColor(i,clr::ALF_ONE)));
+			target->draw(*drawn,sf::RenderStates(sf::Transform().translate(charPosition(cBR,VBNEREFF_ICX(i) + 1.5,VBNEREFF_ICY(i) + 0.5))));
+		}
+	}
+	
+	void drawBonesReff(unsigned char currBone,const char *altCurrBoneParent){
 		#define BNEREFF_CHLPAD 1
 		#define BNEREFF_CHRPAD 2
 		#define BNEREFF_CVPAD 1.5
 		
-		#define BNEREFF_ICWIDTH 7
+		#define BNEREFF_ICWIDTH 11
 		
 		#define BNEREFF_IHEIGHT (CLR_RANBW_COUNT * 2)
 		#define BNEREFF_IWIDTH (BONES_MAX_COUNT / BNEREFF_IHEIGHT)
@@ -751,8 +834,8 @@ namespace hud{
 		for(unsigned int i = 0;i < BONES_MAX_COUNT;++i){
 			// Current Bone Highlight
 			if(i == currI){
-				colorBack.setPosition(charPosition(cBR,BNEREFF_ICX(i) + 6,BNEREFF_ICY(i) + 1.0));
-				colorBack.setSize(sf::Vector2f(6 * charWidth,charHeight));
+				colorBack.setPosition(charPosition(cBR,BNEREFF_ICX(i) + 10,BNEREFF_ICY(i) + 1.0));
+				colorBack.setSize(sf::Vector2f(4.5 * charWidth,charHeight));
 				colorBack.setFillColor(sf::Color(0xffffffff));
 				target->draw(colorBack);
 			}
@@ -761,26 +844,41 @@ namespace hud{
 			sprintf(textBuffer,"%2d",i);
 			
 			hudText.setString(std::string(textBuffer));
-			hudText.setPosition(charPosition(cBR,BNEREFF_ICX(i) + 5,BNEREFF_ICY(i)));
+			hudText.setPosition(charPosition(cBR,BNEREFF_ICX(i) + 9,BNEREFF_ICY(i)));
 			hudText.setFillColor(sf::Color(i == currI ? 0x000000ff : 0xffffffff));
 			target->draw(hudText);
 			
+			// Bone Parent
+			if(i == currI && altCurrBoneParent != NULL){
+				sprintf(textBuffer,"<%.3s",altCurrBoneParent);
+			}else{
+				if(bones::getParent(i) < BONES_MAX_COUNT){
+					sprintf(textBuffer,"<%2d",bones::getParent(i));
+				}else{
+					sprintf(textBuffer,"<__");
+				}
+			}
+			
+			hudText.setString(std::string(textBuffer));
+			hudText.setPosition(charPosition(cBR,BNEREFF_ICX(i) + 4,BNEREFF_ICY(i)));
+			hudText.setFillColor(sf::Color(0xffffffff));
+			target->draw(hudText);
+			
 			// Mark
-			drawn = marks[(i / CLR_RANBW_COUNT) % MARK_COUNT];
-			drawn->setFillColor(sf::Color(clr::get(clr::PFL_RANBW,i % CLR_RANBW_COUNT,clr::ALF_ONE)));
-			target->draw(*drawn,sf::RenderStates(sf::Transform().translate(charPosition(cBR,BNEREFF_ICX(i) + 1.5,BNEREFF_ICY(i) + 0.5))));
+			drawn = marks[markShape(i)];
+			drawn->setFillColor(sf::Color(markColor(i,clr::ALF_ONE)));
+			target->draw(*drawn,sf::RenderStates(sf::Transform().translate(charPosition(cBR,BNEREFF_ICX(i) + 5.5,BNEREFF_ICY(i) + 0.5))));
 		}
 	}
 	
-	void drawMark(enum markType type,int16_t x,int16_t y,bool isScaleNorm,float scale,uint32_t color){
-		float newScale = isScaleNorm ? vw::norm::getScale() * scale : scale;
-		sf::Shape *drawn = marks[type];
+	void drawCircle(int16_t x,int16_t y,bool isRadNorm,float radius,uint32_t color){
+		float newRadius = isRadNorm ? vw::norm::getScale() * radius : radius;
 		
-		drawn->setScale(newScale,newScale);
-		drawn->setFillColor(sf::Color(color));
+		circle.setScale(newRadius,newRadius);
+		circle.setFillColor(sf::Color(color));
 		
 		target->draw(
-			*drawn,
+			circle,
 			sf::RenderStates(sf::Transform().translate(vw::norm::transform().transformPoint(vw::norm::toD(x),vw::norm::toD(y))))
 		);
 	}
@@ -795,6 +893,38 @@ namespace hud{
 		target->draw(
 			circleOutline,
 			sf::RenderStates(sf::Transform().translate(vw::norm::transform().transformPoint(vw::norm::toD(x),vw::norm::toD(y))))
+		);
+	}
+	
+	void drawMark(unsigned int i,int16_t x,int16_t y,bool isScaleNorm,float scale){
+		float newScale = isScaleNorm ? vw::norm::getScale() * scale : scale;
+		sf::Shape *drawn = marks[markShape(i)];
+		
+		drawn->setScale(newScale,newScale);
+		drawn->setFillColor(sf::Color(markColor(i,clr::ALF_HALF)));
+		
+		target->draw(
+			*drawn,
+			sf::RenderStates(sf::Transform().translate(vw::norm::transform().transformPoint(vw::norm::toD(x),vw::norm::toD(y))))
+		);
+	}
+	
+	void drawStem(unsigned int i,int16_t srcX,int16_t srcY,int16_t destX,int16_t destY){
+		double srcX_D = vw::norm::toD(srcX);
+		double srcY_D = vw::norm::toD(srcY);
+		double destX_D = vw::norm::toD(destX);
+		double destY_D = vw::norm::toD(destY);
+		
+		float len = sqrt(geom::distSquared_D(srcX_D,srcY_D,destX_D,destY_D)) * vw::norm::getZoomScale();
+		float angle = atan2(srcY_D - destY_D,destX_D - srcX_D); // Flipped Y to adjust to SFML coordinates
+		
+		stem.setRotation(angle * 180.0 / PI);
+		stem.setScale(len,1.0);
+		stem.setFillColor(sf::Color(markColor(i,clr::ALF_HALF)));
+		
+		target->draw(
+			stem,
+			sf::RenderStates(sf::Transform().translate(vw::norm::transform().transformPoint(srcX_D,srcY_D)))
 		);
 	}
 	
