@@ -27,7 +27,31 @@ namespace bones{
 	}
 	
 	void setParent(unsigned char i,unsigned char parent){
-		boneArray[i & BONE_INDEX_MASK].parent = parent;
+		unsigned char j = i & BONE_INDEX_MASK;
+		
+		// Escape case
+		if(parent >= BONES_MAX_COUNT){
+			boneArray[j].parent = BONES_MAX_COUNT;
+			return;
+		}
+		
+		// Check to avoid creation of cycles
+		if(j == parent){
+			return;
+		}
+		
+		unsigned char currI = parent;
+		
+		while(boneArray[currI].parent < BONES_MAX_COUNT){
+			if(boneArray[currI].parent == j){
+				return;
+			}
+			
+			currI = boneArray[currI].parent;
+		}
+		
+		// Assign
+		boneArray[j].parent = parent;
 	}
 	
 	int16_t getX(unsigned char i){

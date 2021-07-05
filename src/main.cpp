@@ -232,8 +232,6 @@ int main(){
 	unsigned char currClr = 0;
 	unsigned char currBone = 0;
 	
-	int tempInt;
-	
 	// Loop & Loop State -----------------------------------
 	bool run = true;
 	sf::Event event;
@@ -634,9 +632,7 @@ int main(){
 							break;
 						case STATE_ATOP_BONE_PARENT_SET:
 							if(strIn::interpret(event.text.unicode)){
-								tempInt = atoi(strIn::buffer());
-								bones::setParent(currBone,tempInt < BONES_MAX_COUNT ? tempInt : BONES_MAX_COUNT);
-								
+								bones::setParent(currBone,atoi(strIn::buffer()));
 								strIn::deactivate();
 								
 								state = STATE_BONES;
