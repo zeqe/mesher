@@ -22,6 +22,10 @@
 		bool prime(int16_t x,int16_t y);
 		void update(int16_t x,int16_t y);
 		
+		int32_t valX();
+		int32_t valY();
+		float valScalar();
+		
 		void apply(int16_t *x,int16_t *y);
 		void exit();
 		

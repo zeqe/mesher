@@ -17,10 +17,13 @@
 	}
 	
 	namespace pose{
-		void setModifiers(enum transformOp (*type)(),bool (*active)(),float (*xVal)(),float (*yVal));
-		void applyModifiers();
+		void reset();
 		
-		void setActive(unsigned char i);
+		void setModifiers(enum transformOp (*type)(),bool (*active)(),int32_t (*valX)(),int32_t (*valY)(),float (*valScalar)());
+		void applyModifiers(unsigned char currPose);
+		void calculateGlobals();
+		
+		void draw();
 	}
 	
 	#define SKELETON_INCLUDED

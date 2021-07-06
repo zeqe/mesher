@@ -205,6 +205,8 @@ int main(){
 	render::setColors(clr::PFL_EDITR,clr::PFL_EDITR_SOL);
 	
 	bones::init();
+	pose::setModifiers(trOp::currentOp,trOp::dirty,trOp::valX,trOp::valY,trOp::valScalar);
+	pose::reset();
 	
 	// View ------------------------------------------------
 	window.setView(sf::View(sf::Vector2f(0.0,0.0),sf::Vector2f(WIN_INIT_WIDTH,WIN_INIT_HEIGHT)));
@@ -261,6 +263,8 @@ int main(){
 		
 		if(state == STATE_BONES || state == STATE_ATOP_BONE_PARENT_SET){
 			bones::draw();
+		}else if(state == STATE_POSE || state == STATE_ATOP_POSE_TRANSFORM){
+			pose::draw();
 		}
 		
 		// HUD
@@ -294,6 +298,7 @@ int main(){
 				
 				break;
 			case STATE_V_BONES:
+			case STATE_POSE:
 				hud::drawVBonesReff(currBone);
 				
 				break;
@@ -492,6 +497,8 @@ int main(){
 						case STATED_KI(STATE_V_BONES,0,0,0,KEY_DOWN):
 						case STATED_KI(STATE_BONES,0,0,0,KEY_UP):
 						case STATED_KI(STATE_BONES,0,0,0,KEY_DOWN):
+						case STATED_KI(STATE_POSE,0,0,0,KEY_UP):
+						case STATED_KI(STATE_POSE,0,0,0,KEY_DOWN):
 							currBone = (BONES_MAX_COUNT + currBone - (keyIn == KEY_UP) + (keyIn == KEY_DOWN)) % BONES_MAX_COUNT;
 							
 							break;
@@ -558,6 +565,10 @@ int main(){
 							bones::setParent(currBone,BONES_MAX_COUNT);
 							
 							break;
+						case STATED_KI(STATE_POSE,0,1,0,KEY_C):
+							pose::reset();
+							
+							break;
 						case STATED_KI(STATE_ATOP_TRI_ADD,0,0,0,KEY_ESC):
 							state = STATE_VERTS;
 							
@@ -588,6 +599,11 @@ int main(){
 						case STATED_KI(STATE_ATOP_BONE_PARENT_SET,0,0,0,KEY_ESC):
 							strIn::deactivate();
 							state = STATE_BONES;
+							
+							break;
+						case STATED_KI(STATE_ATOP_POSE_TRANSFORM,0,0,0,KEY_ESC):
+							trOp::exit();
+							state = STATE_POSE;
 							
 							break;
 						default:
@@ -710,6 +726,24 @@ int main(){
 									bones::setOrigin(currBone,iX,iY);
 									
 									break;
+								case STATE_POSE:
+									if(isAltDown){
+										if(sf::Keyboard::isKeyPressed(sf::Keyboard::T)){
+											if(trOp::init(TROP_TRANSLATE,iX,iY)){
+												state = STATE_ATOP_POSE_TRANSFORM;
+											}
+										}else if(sf::Keyboard::isKeyPressed(sf::Keyboard::R)){
+											if(trOp::init(TROP_ROTATE,bones::getX(currBone),bones::getY(currBone))){
+												state = STATE_ATOP_POSE_TRANSFORM;
+											}
+										}else if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)){
+											if(trOp::init(TROP_SCALE,bones::getX(currBone),bones::getY(currBone))){
+												state = STATE_ATOP_POSE_TRANSFORM;
+											}
+										}
+									}
+									
+									break;
 								case STATE_ATOP_TRI_ADD:
 									if(triCn::add(layers[currLayer],iX,iY)){
 										state = STATE_VERTS;
@@ -732,6 +766,27 @@ int main(){
 											trOp::exit();
 											
 											state = STATE_VERTS;
+											
+											break;
+										case TROP_STATE_NONE:
+										default:
+											break;
+									}
+									
+									break;
+								case STATE_ATOP_POSE_TRANSFORM:
+									switch(trOp::currentState()){
+										case TROP_STATE_PRIME:
+											trOp::prime(iX,iY);
+											
+											break;
+										case TROP_STATE_UPDATE:
+											pose::applyModifiers(currBone);
+											pose::calculateGlobals();
+											
+											trOp::exit();
+											
+											state = STATE_POSE;
 											
 											break;
 										case TROP_STATE_NONE:
@@ -799,6 +854,11 @@ int main(){
 					
 					// Tranformation operation preview update
 					trOp::update(iX,iY);
+					
+					if(state == STATE_ATOP_POSE_TRANSFORM && trOp::dirty()){
+						pose::applyModifiers(currBone);
+						pose::calculateGlobals();
+					}
 					
 					break;
 				case sf::Event::MouseButtonReleased:

@@ -42,7 +42,7 @@ namespace trOp{
 	}
 	
 	float angleLH(){
-		return atan2(distHX(),distHY()) - atan2(distLX(),distLY());
+		return atan2(distLY(),distLX()) - atan2(distHY(),distHX());
 	}
 	
 	float scaleLH(){
@@ -107,6 +107,39 @@ namespace trOp{
 	void update(int16_t x,int16_t y){
 		lastX = x;
 		lastY = y;
+	}
+	
+	int32_t valX(){
+		if(op == TROP_TRANSLATE){
+			return distLX();
+		}
+		
+		return 0;
+	}
+	
+	int32_t valY(){
+		if(op == TROP_TRANSLATE){
+			return distLY();
+		}
+		
+		return 0;
+	}
+	
+	float valScalar(){
+		switch(op){
+			case TROP_ROTATE:
+				return angleLH();
+				
+				break;
+			case TROP_SCALE:
+				return scaleLH();
+				
+				break;
+			default:
+				break;
+		}
+		
+		return 0.0;
 	}
 	
 	// Private constrained operation helper functions

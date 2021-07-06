@@ -107,7 +107,8 @@ const std::string mesherStateTitles[TOTAL_STATE_COUNT] = {
 	"<Color Set>", // STATE_ATOP_COLOR_SET
 	"<Grid Set>", // STATE_ATOP_GRID_SET
 	"<Layer Name>", // STATE_ATOP_LAYER_NAME
-	"<Bone Parent Set>" // STATE_ATOP_BONE_PARENT_SET
+	"<Parent Set>", // STATE_ATOP_BONE_PARENT_SET
+	"<Transform>" // STATE_ATOP_POSE_TRANSFORM
 };
 
 std::string mesherHelpTitleUnderline = std::string(40,' ');
