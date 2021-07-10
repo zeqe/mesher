@@ -88,6 +88,9 @@ struct poseState{
 	int32_t translateX,translateY;
 	float scale,rotation;
 	
+	int32_t d_TranslateX,d_TranslateY;
+	float d_Scale,d_Rotation;
+	
 	sf::Transform transformation;
 };
 
@@ -105,9 +108,13 @@ namespace pose{
 		for(unsigned int i = 0;i < BONES_MAX_COUNT;++i){
 			poses[i].translateX = 0;
 			poses[i].translateY = 0;
-			
 			poses[i].scale = 1.0;
 			poses[i].rotation = 0.0;
+			
+			poses[i].d_TranslateX = 0;
+			poses[i].d_TranslateY = 0;
+			poses[i].d_Scale = 1.0;
+			poses[i].d_Rotation = 0.0;
 			
 			poses[i].transformation = sf::Transform::Identity;
 			globalTransforms[i] = sf::Transform::Identity;
@@ -122,41 +129,91 @@ namespace pose{
 		opValScalar = valScalar;
 	}
 	
-	void applyModifiers(unsigned char currPose){
+	void calculateLocalTransformation(unsigned char currPose){
+		poses[currPose].transformation =
+			sf::Transform().translate(
+				vw::norm::toD(poses[currPose].translateX + poses[currPose].d_TranslateX),
+				vw::norm::toD(poses[currPose].translateY + poses[currPose].d_TranslateY)
+			).scale(
+				(poses[currPose].scale * poses[currPose].d_Scale),
+				(poses[currPose].scale * poses[currPose].d_Scale),
+				vw::norm::toD(boneArray[currPose].x + poses[currPose].translateX + poses[currPose].d_TranslateX),
+				vw::norm::toD(boneArray[currPose].y + poses[currPose].translateY + poses[currPose].d_TranslateY)
+			).rotate(
+				(poses[currPose].rotation + poses[currPose].d_Rotation) * 180.0 / PI,
+				vw::norm::toD(boneArray[currPose].x + poses[currPose].translateX + poses[currPose].d_TranslateX),
+				vw::norm::toD(boneArray[currPose].y + poses[currPose].translateY + poses[currPose].d_TranslateY)
+			);
+	}
+	
+	void updateModifiers(bool apply,unsigned char currPose){
 		if(!opActive()){
 			return;
 		}
 		
+		unsigned char currI;
+		float localRot;
+		sf::Vector2f point;
+		
 		switch(opType()){
 			case TROP_TRANSLATE:
-				poses[currPose].translateX = opValX();
-				poses[currPose].translateY = opValY();
+				// Determine local rotation
+				currI = currPose;
+				localRot = 0.0;
+				
+				while(currI < BONES_MAX_COUNT){
+					localRot += poses[currI].rotation;
+					currI = boneArray[currI].parent;
+				}
+				
+				// Determine according transformation
+				point = sf::Transform().rotate(localRot).transformPoint(vw::norm::toD(opValX()),vw::norm::toD(opValY()));
+				
+				if(apply){
+					poses[currPose].translateX += vw::norm::toI(point.x);
+					poses[currPose].translateY += vw::norm::toI(point.y);
+					
+					poses[currPose].d_TranslateX = 0;
+					poses[currPose].d_TranslateY = 0;
+				}else{
+					poses[currPose].d_TranslateX = vw::norm::toI(point.x);
+					poses[currPose].d_TranslateY = vw::norm::toI(point.y);
+				}
 				
 				break;
 			case TROP_ROTATE:
-				poses[currPose].rotation = opValScalar();
+				if(apply){
+					poses[currPose].rotation += opValScalar();
+					poses[currPose].d_Rotation = 0.0;
+				}else{
+					poses[currPose].d_Rotation = opValScalar();
+				}
 				
 				break;
 			case TROP_SCALE:
-				poses[currPose].scale = opValScalar();
+				if(apply){
+					poses[currPose].scale *= opValScalar();
+					poses[currPose].d_Scale = 1.0;
+				}else{
+					poses[currPose].d_Scale = opValScalar();
+				}
 				
 				break;
 		}
 		
-		poses[currPose].transformation =
-			sf::Transform().scale(
-				poses[currPose].scale,
-				poses[currPose].scale,
-				vw::norm::toD(boneArray[currPose].x),
-				vw::norm::toD(boneArray[currPose].y)
-			).rotate(
-				poses[currPose].rotation * 180.0 / PI,
-				vw::norm::toD(boneArray[currPose].x),
-				vw::norm::toD(boneArray[currPose].y)
-			).translate(
-				vw::norm::toD(poses[currPose].translateX),
-				vw::norm::toD(poses[currPose].translateY)
-			);
+		calculateLocalTransformation(currPose);
+	}
+	
+	void clearUnappliedModifiers(){
+		for(unsigned int i = 0;i < BONES_MAX_COUNT;++i){
+			poses[i].d_TranslateX = 0;
+			poses[i].d_TranslateY = 0;
+			
+			poses[i].d_Scale = 1.0;
+			poses[i].d_Rotation = 0.0;
+			
+			calculateLocalTransformation(i);
+		}
 	}
 	
 	void composeParent(unsigned char parent){
@@ -184,34 +241,32 @@ namespace pose{
 		}
 	}
 	
+	sf::Vector2<int16_t> getBonePosition(unsigned char bone){
+		sf::Vector2f tPos = globalTransforms[bone & BONE_INDEX_MASK].transformPoint(
+			vw::norm::toD(boneArray[bone & BONE_INDEX_MASK].x),
+			vw::norm::toD(boneArray[bone & BONE_INDEX_MASK].y)
+		);
+		
+		return sf::Vector2<int16_t>(vw::norm::toI(tPos.x),vw::norm::toI(tPos.y));
+	}
+	
 	void draw(){
-		sf::Vector2f src,dst;
+		sf::Vector2<int16_t> src,dst;
 		
 		// Stems
 		for(unsigned int i = 0;i < BONES_MAX_COUNT;++i){
 			if(boneArray[i].parent < BONES_MAX_COUNT){
-				src = globalTransforms[i].transformPoint(
-					vw::norm::toD(boneArray[i].x),
-					vw::norm::toD(boneArray[i].y)
-				);
+				src = getBonePosition(i);
+				dst = getBonePosition(boneArray[i].parent);
 				
-				dst = globalTransforms[boneArray[i].parent].transformPoint(
-					vw::norm::toD(boneArray[boneArray[i].parent].x),
-					vw::norm::toD(boneArray[boneArray[i].parent].y)
-				);
-				
-				hud::drawStem(i,vw::norm::toI(src.x),vw::norm::toI(src.y),vw::norm::toI(dst.x),vw::norm::toI(dst.y));
+				hud::drawStem(i,src.x,src.y,dst.x,dst.y);
 			}
 		}
 		
 		// Marks
 		for(unsigned int i = 0;i < BONES_MAX_COUNT;++i){
-			src = globalTransforms[i].transformPoint(
-				vw::norm::toD(boneArray[i].x),
-				vw::norm::toD(boneArray[i].y)
-			);
-			
-			hud::drawMark(i,vw::norm::toI(src.x),vw::norm::toI(src.y),false,POINT_RADIUS);
+			src = getBonePosition(i);
+			hud::drawMark(i,src.x,src.y,false,POINT_RADIUS);
 		}
 	}
 }

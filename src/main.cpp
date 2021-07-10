@@ -234,6 +234,8 @@ int main(){
 	unsigned char currClr = 0;
 	unsigned char currBone = 0;
 	
+	sf::Vector2<int16_t> tempPos;
+	
 	// Loop & Loop State -----------------------------------
 	bool run = true;
 	sf::Event event;
@@ -603,6 +605,10 @@ int main(){
 							break;
 						case STATED_KI(STATE_ATOP_POSE_TRANSFORM,0,0,0,KEY_ESC):
 							trOp::exit();
+							
+							pose::clearUnappliedModifiers();
+							pose::calculateGlobals();
+							
 							state = STATE_POSE;
 							
 							break;
@@ -728,16 +734,18 @@ int main(){
 									break;
 								case STATE_POSE:
 									if(isAltDown){
+										tempPos = pose::getBonePosition(currBone);
+										
 										if(sf::Keyboard::isKeyPressed(sf::Keyboard::T)){
 											if(trOp::init(TROP_TRANSLATE,iX,iY)){
 												state = STATE_ATOP_POSE_TRANSFORM;
 											}
 										}else if(sf::Keyboard::isKeyPressed(sf::Keyboard::R)){
-											if(trOp::init(TROP_ROTATE,bones::getX(currBone),bones::getY(currBone))){
+											if(trOp::init(TROP_ROTATE,tempPos.x,tempPos.y)){
 												state = STATE_ATOP_POSE_TRANSFORM;
 											}
 										}else if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)){
-											if(trOp::init(TROP_SCALE,bones::getX(currBone),bones::getY(currBone))){
+											if(trOp::init(TROP_SCALE,tempPos.x,tempPos.y)){
 												state = STATE_ATOP_POSE_TRANSFORM;
 											}
 										}
@@ -781,7 +789,7 @@ int main(){
 											
 											break;
 										case TROP_STATE_UPDATE:
-											pose::applyModifiers(currBone);
+											pose::updateModifiers(true,currBone);
 											pose::calculateGlobals();
 											
 											trOp::exit();
@@ -856,7 +864,7 @@ int main(){
 					trOp::update(iX,iY);
 					
 					if(state == STATE_ATOP_POSE_TRANSFORM && trOp::dirty()){
-						pose::applyModifiers(currBone);
+						pose::updateModifiers(false,currBone);
 						pose::calculateGlobals();
 					}
 					

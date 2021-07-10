@@ -1,6 +1,8 @@
 #ifndef SKELETON_INCLUDED
 	#include <cstdint>
 	
+	#include <SFML/Graphics.hpp>
+	
 	#include "transformOp.hpp"
 	
 	namespace bones{
@@ -20,8 +22,11 @@
 		void reset();
 		
 		void setModifiers(enum transformOp (*type)(),bool (*active)(),int32_t (*valX)(),int32_t (*valY)(),float (*valScalar)());
-		void applyModifiers(unsigned char currPose);
+		void updateModifiers(bool apply,unsigned char currPose);
+		void clearUnappliedModifiers();
+		
 		void calculateGlobals();
+		sf::Vector2<int16_t> getBonePosition(unsigned char bone);
 		
 		void draw();
 	}
