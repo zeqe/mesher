@@ -12,17 +12,17 @@ namespace trOp{
 	bool dirtied;
 	
 	// Transformation values
-	int16_t srcX,srcY;
-	int16_t handleX,handleY;
-	int16_t lastX,lastY;
+	int32_t srcX,srcY;
+	int32_t handleX,handleY;
+	int32_t lastX,lastY;
 	
 	// Private derivative values
 	int32_t distHX(){
-		return (int32_t)handleX - (int32_t)srcX;
+		return handleX - srcX;
 	}
 	
 	int32_t distHY(){
-		return (int32_t)handleY - (int32_t)srcY;
+		return handleY - srcY;
 	}
 	
 	float distHLen(){
@@ -30,11 +30,11 @@ namespace trOp{
 	}
 	
 	int32_t distLX(){
-		return (int32_t)lastX - (int32_t)srcX;
+		return lastX - srcX;
 	}
 	
 	int32_t distLY(){
-		return (int32_t)lastY - (int32_t)srcY;
+		return lastY - srcY;
 	}
 	
 	float distLLen(){
@@ -63,7 +63,7 @@ namespace trOp{
 		return (opState == TROP_STATE_UPDATE);
 	}
 	
-	bool init(enum transformOp newOp,int16_t x,int16_t y){
+	bool init(enum transformOp newOp,int32_t x,int32_t y){
 		if(opState != TROP_STATE_NONE){
 			return false;
 		}
@@ -87,7 +87,7 @@ namespace trOp{
 		return true;
 	}
 	
-	bool prime(int16_t x,int16_t y){
+	bool prime(int32_t x,int32_t y){
 		if(opState != TROP_STATE_PRIME){
 			return false;
 		}
@@ -104,7 +104,7 @@ namespace trOp{
 		return true;
 	}
 	
-	void update(int16_t x,int16_t y){
+	void update(int32_t x,int32_t y){
 		lastX = x;
 		lastY = y;
 	}

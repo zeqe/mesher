@@ -140,6 +140,14 @@ namespace vw{
 			return (int16_t)(val * (double)INT16_MAX);
 		}
 		
+		double toD_u(int32_t val){
+			return (double)val / (double)INT16_MAX;
+		}
+		
+		int32_t toI_u(double val){
+			return (int32_t)(val * (double)INT16_MAX);
+		}
+		
 		// Normalized scale ------------------------------------------------------------
 		void setScale(float newScale){
 			normScale = newScale;

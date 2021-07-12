@@ -18,9 +18,9 @@
 		enum transformOpState currentState();
 		bool dirty();
 		
-		bool init(enum transformOp op,int16_t x,int16_t y);
-		bool prime(int16_t x,int16_t y);
-		void update(int16_t x,int16_t y);
+		bool init(enum transformOp op,int32_t x,int32_t y);
+		bool prime(int32_t x,int32_t y);
+		void update(int32_t x,int32_t y);
 		
 		int32_t valX();
 		int32_t valY();

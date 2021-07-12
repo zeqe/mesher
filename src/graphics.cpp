@@ -872,7 +872,7 @@ namespace hud{
 		}
 	}
 	
-	void drawCircle(int16_t x,int16_t y,bool isRadNorm,float radius,uint32_t color){
+	void drawCircle(int32_t x,int32_t y,bool isRadNorm,float radius,uint32_t color){
 		float newRadius = isRadNorm ? vw::norm::getScale() * radius : radius;
 		
 		circle.setScale(newRadius,newRadius);
@@ -880,11 +880,11 @@ namespace hud{
 		
 		target->draw(
 			circle,
-			sf::RenderStates(sf::Transform().translate(vw::norm::transform().transformPoint(vw::norm::toD(x),vw::norm::toD(y))))
+			sf::RenderStates(sf::Transform().translate(vw::norm::transform().transformPoint(vw::norm::toD_u(x),vw::norm::toD_u(y))))
 		);
 	}
 	
-	void drawCircleOutline(int16_t x,int16_t y,bool isRadNorm,float radius,uint32_t color){
+	void drawCircleOutline(int32_t x,int32_t y,bool isRadNorm,float radius,uint32_t color){
 		float newRadius = isRadNorm ? vw::norm::getScale() * radius : radius;
 		
 		circleOutline.setRadius(newRadius);
@@ -893,11 +893,11 @@ namespace hud{
 		
 		target->draw(
 			circleOutline,
-			sf::RenderStates(sf::Transform().translate(vw::norm::transform().transformPoint(vw::norm::toD(x),vw::norm::toD(y))))
+			sf::RenderStates(sf::Transform().translate(vw::norm::transform().transformPoint(vw::norm::toD_u(x),vw::norm::toD_u(y))))
 		);
 	}
 	
-	void drawMark(unsigned int i,int16_t x,int16_t y,bool isScaleNorm,float scale){
+	void drawMark(unsigned int i,int32_t x,int32_t y,bool isScaleNorm,float scale){
 		float newScale = isScaleNorm ? vw::norm::getScale() * scale : scale;
 		sf::Shape *drawn = marks[markShape(i)];
 		
@@ -906,15 +906,15 @@ namespace hud{
 		
 		target->draw(
 			*drawn,
-			sf::RenderStates(sf::Transform().translate(vw::norm::transform().transformPoint(vw::norm::toD(x),vw::norm::toD(y))))
+			sf::RenderStates(sf::Transform().translate(vw::norm::transform().transformPoint(vw::norm::toD_u(x),vw::norm::toD_u(y))))
 		);
 	}
 	
-	void drawStem(unsigned int i,int16_t srcX,int16_t srcY,int16_t destX,int16_t destY){
-		double srcX_D = vw::norm::toD(srcX);
-		double srcY_D = vw::norm::toD(srcY);
-		double destX_D = vw::norm::toD(destX);
-		double destY_D = vw::norm::toD(destY);
+	void drawStem(unsigned int i,int32_t srcX,int32_t srcY,int32_t destX,int32_t destY){
+		double srcX_D = vw::norm::toD_u(srcX);
+		double srcY_D = vw::norm::toD_u(srcY);
+		double destX_D = vw::norm::toD_u(destX);
+		double destY_D = vw::norm::toD_u(destY);
 		
 		float len = sqrt(geom::distSquared_D(srcX_D,srcY_D,destX_D,destY_D)) * vw::norm::getZoomScale();
 		float angle = atan2(srcY_D - destY_D,destX_D - srcX_D); // Flipped Y to adjust to SFML coordinates

@@ -25,8 +25,8 @@
 		void updateModifiers(bool apply,unsigned char currPose);
 		void clearUnappliedModifiers();
 		
-		void calculateGlobals();
-		sf::Vector2<int16_t> getBonePosition(unsigned char bone);
+		void calculateGlobalTransformations();
+		sf::Vector2<int32_t> getBonePosition(unsigned char bone);
 		
 		void draw();
 	}

@@ -130,19 +130,22 @@ namespace pose{
 	}
 	
 	void calculateLocalTransformation(unsigned char currPose){
+		float centerX = vw::norm::toD_u((int32_t)boneArray[currPose].x + poses[currPose].translateX + poses[currPose].d_TranslateX);
+		float centerY = vw::norm::toD_u((int32_t)boneArray[currPose].y + poses[currPose].translateY + poses[currPose].d_TranslateY);
+		
 		poses[currPose].transformation =
-			sf::Transform().translate(
-				vw::norm::toD(poses[currPose].translateX + poses[currPose].d_TranslateX),
-				vw::norm::toD(poses[currPose].translateY + poses[currPose].d_TranslateY)
-			).scale(
-				(poses[currPose].scale * poses[currPose].d_Scale),
-				(poses[currPose].scale * poses[currPose].d_Scale),
-				vw::norm::toD(boneArray[currPose].x + poses[currPose].translateX + poses[currPose].d_TranslateX),
-				vw::norm::toD(boneArray[currPose].y + poses[currPose].translateY + poses[currPose].d_TranslateY)
+			sf::Transform().scale(
+				poses[currPose].scale * poses[currPose].d_Scale,
+				poses[currPose].scale * poses[currPose].d_Scale,
+				centerX,
+				centerY
 			).rotate(
-				(poses[currPose].rotation + poses[currPose].d_Rotation) * 180.0 / PI,
-				vw::norm::toD(boneArray[currPose].x + poses[currPose].translateX + poses[currPose].d_TranslateX),
-				vw::norm::toD(boneArray[currPose].y + poses[currPose].translateY + poses[currPose].d_TranslateY)
+				poses[currPose].rotation + poses[currPose].d_Rotation,
+				centerX,
+				centerY
+			).translate(
+				vw::norm::toD_u(poses[currPose].translateX + poses[currPose].d_TranslateX),
+				vw::norm::toD_u(poses[currPose].translateY + poses[currPose].d_TranslateY)
 			);
 	}
 	
@@ -158,7 +161,7 @@ namespace pose{
 		switch(opType()){
 			case TROP_TRANSLATE:
 				// Determine local rotation
-				currI = currPose;
+				currI = boneArray[currPose].parent;
 				localRot = 0.0;
 				
 				while(currI < BONES_MAX_COUNT){
@@ -167,26 +170,26 @@ namespace pose{
 				}
 				
 				// Determine according transformation
-				point = sf::Transform().rotate(localRot).transformPoint(vw::norm::toD(opValX()),vw::norm::toD(opValY()));
+				point = sf::Transform().rotate(-localRot).transformPoint(vw::norm::toD_u(opValX()),vw::norm::toD_u(opValY()));
 				
 				if(apply){
-					poses[currPose].translateX += vw::norm::toI(point.x);
-					poses[currPose].translateY += vw::norm::toI(point.y);
+					poses[currPose].translateX += vw::norm::toI_u(point.x);
+					poses[currPose].translateY += vw::norm::toI_u(point.y);
 					
 					poses[currPose].d_TranslateX = 0;
 					poses[currPose].d_TranslateY = 0;
 				}else{
-					poses[currPose].d_TranslateX = vw::norm::toI(point.x);
-					poses[currPose].d_TranslateY = vw::norm::toI(point.y);
+					poses[currPose].d_TranslateX = vw::norm::toI_u(point.x);
+					poses[currPose].d_TranslateY = vw::norm::toI_u(point.y);
 				}
 				
 				break;
 			case TROP_ROTATE:
 				if(apply){
-					poses[currPose].rotation += opValScalar();
+					poses[currPose].rotation += opValScalar() * 180.0 / PI;
 					poses[currPose].d_Rotation = 0.0;
 				}else{
-					poses[currPose].d_Rotation = opValScalar();
+					poses[currPose].d_Rotation = opValScalar() * 180.0 / PI;
 				}
 				
 				break;
@@ -229,7 +232,7 @@ namespace pose{
 		}
 	}
 	
-	void calculateGlobals(){
+	void calculateGlobalTransformations(){
 		for(unsigned int i = 0;i < BONES_MAX_COUNT;++i){
 			globalTransforms[i] = sf::Transform::Identity;
 		}
@@ -241,17 +244,17 @@ namespace pose{
 		}
 	}
 	
-	sf::Vector2<int16_t> getBonePosition(unsigned char bone){
+	sf::Vector2<int32_t> getBonePosition(unsigned char bone){
 		sf::Vector2f tPos = globalTransforms[bone & BONE_INDEX_MASK].transformPoint(
 			vw::norm::toD(boneArray[bone & BONE_INDEX_MASK].x),
 			vw::norm::toD(boneArray[bone & BONE_INDEX_MASK].y)
 		);
 		
-		return sf::Vector2<int16_t>(vw::norm::toI(tPos.x),vw::norm::toI(tPos.y));
+		return sf::Vector2<int32_t>(vw::norm::toI_u(tPos.x),vw::norm::toI_u(tPos.y));
 	}
 	
 	void draw(){
-		sf::Vector2<int16_t> src,dst;
+		sf::Vector2<int32_t> src,dst;
 		
 		// Stems
 		for(unsigned int i = 0;i < BONES_MAX_COUNT;++i){

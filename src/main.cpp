@@ -234,7 +234,7 @@ int main(){
 	unsigned char currClr = 0;
 	unsigned char currBone = 0;
 	
-	sf::Vector2<int16_t> tempPos;
+	sf::Vector2<int32_t> tempPos;
 	
 	// Loop & Loop State -----------------------------------
 	bool run = true;
@@ -607,7 +607,7 @@ int main(){
 							trOp::exit();
 							
 							pose::clearUnappliedModifiers();
-							pose::calculateGlobals();
+							pose::calculateGlobalTransformations();
 							
 							state = STATE_POSE;
 							
@@ -790,7 +790,7 @@ int main(){
 											break;
 										case TROP_STATE_UPDATE:
 											pose::updateModifiers(true,currBone);
-											pose::calculateGlobals();
+											pose::calculateGlobalTransformations();
 											
 											trOp::exit();
 											
@@ -865,7 +865,7 @@ int main(){
 					
 					if(state == STATE_ATOP_POSE_TRANSFORM && trOp::dirty()){
 						pose::updateModifiers(false,currBone);
-						pose::calculateGlobals();
+						pose::calculateGlobalTransformations();
 					}
 					
 					break;

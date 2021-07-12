@@ -33,6 +33,9 @@
 			double toD(int16_t val);
 			int16_t toI(double val);
 			
+			double toD_u(int32_t val);
+			int32_t toI_u(double val);
+			
 			// Normalized scale
 			void setScale(float newScale);
 			
