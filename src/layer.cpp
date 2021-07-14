@@ -10,6 +10,7 @@
 #include "geometry.hpp"
 #include "colors.hpp"
 #include "graphics.hpp"
+#include "skeleton.hpp"
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 // Layer ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -341,6 +342,25 @@ void vertLayer::draw(bool wireframe,bool showNearestPoint){
 	}
 	
 	// Draw buffer -------------------------------------------
+	enum render::mode drawMode;
+	
+	switch(currentView){
+		case VIEW_XY:
+		case VIEW_COLORS:
+		case VIEW_BONES:
+			drawMode = render::MODE_XY;
+			
+			break;
+		case VIEW_UV:
+			drawMode = render::MODE_UV;
+			
+			break;
+		case VIEW_POSE:
+			drawMode = render::MODE_POSE;
+			
+			break;
+	}
+	
 	// Display tris updasion and rendering
 	if(modified || vertModifiers_Applicable()){
 		// Copying to display buffer
@@ -373,10 +393,10 @@ void vertLayer::draw(bool wireframe,bool showNearestPoint){
 		}
 		
 		// Render
-		render::loadAndDrawTris(&disp,&dispTris,currentView == VIEW_UV,currentView == VIEW_COLORS,wireframe);
+		render::loadAndDrawTris(&disp,&dispTris,drawMode,currentView == VIEW_COLORS,wireframe);
 	}else{
 		// Default rendering
-		render::loadAndDrawTris(NULL,&dispTris,currentView == VIEW_UV,currentView == VIEW_COLORS,wireframe);
+		render::loadAndDrawTris(NULL,&dispTris,drawMode,currentView == VIEW_COLORS,wireframe);
 	}
 	
 	// State finalization
@@ -388,20 +408,31 @@ void vertLayer::draw(bool wireframe,bool showNearestPoint){
 	}
 	
 	// Draw vertices -------------------------------------------
-	int16_t drawX,drawY;
+	int16_t preDrawX,preDrawY;
+	int32_t drawX,drawY;
 	
 	for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
 		// Vertex position retrieval and adjustment as needed
 		if(currentView == VIEW_UV){
-			drawX = VERT_U(&buffer,i);
-			drawY = VERT_V(&buffer,i);
+			preDrawX = VERT_U(&buffer,i);
+			preDrawY = VERT_V(&buffer,i);
 		}else{
-			drawX = VERT_X(&buffer,i);
-			drawY = VERT_Y(&buffer,i);
+			preDrawX = VERT_X(&buffer,i);
+			preDrawY = VERT_Y(&buffer,i);
 		}
 		
 		if(selVerts[i] && vertModifiers_Applicable()){
-			(*vertModifier)(&drawX,&drawY);
+			(*vertModifier)(&preDrawX,&preDrawY);
+		}
+		
+		if(currentView == VIEW_POSE){
+			sf::Vector2<int32_t> tPos = pose::getPointPosition(VERT_BONE(&buffer,i),preDrawX,preDrawY);
+			
+			drawX = tPos.x;
+			drawY = tPos.y;
+		}else{
+			drawX = preDrawX;
+			drawY = preDrawY;
 		}
 		
 		// Drawing
@@ -424,6 +455,7 @@ void vertLayer::draw(bool wireframe,bool showNearestPoint){
 				
 				break;
 			case VIEW_BONES:
+			case VIEW_POSE:
 				hud::drawMark(VERT_BONE(&buffer,i),drawX,drawY,false,POINT_RADIUS);
 				
 				break;

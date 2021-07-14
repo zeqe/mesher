@@ -24,10 +24,13 @@ extern "C" {
 // Shader customization
 const char SHADER_VERT_CASES[] =
 	"case 1u:\n"
-		"XY = (position + XY * paramsV.xy) * ssr.xy * rotater(ssr.z);\n"
+		"XY = (position + xyuv.xy * paramsV.xy) * ssr.xy * rotater(ssr.z);\n"
 		"break;\n"
 	"case 2u:\n"
-		"XY = (position + UV * paramsV.xy) * ssr.xy * rotater(ssr.z);\n"
+		"XY = (position + xyuv.zw * paramsV.xy) * ssr.xy * rotater(ssr.z);\n"
+		"break;\n"
+	"case 3u:\n"
+		"XY = (position + XY * paramsV.xy) * ssr.xy * rotater(ssr.z);\n"
 		"break;\n"
 ;
 
@@ -348,7 +351,7 @@ namespace render{
 		wireframePfl = wAr;
 	}
 	
-	void loadAndDrawTris(struct vecTrisBuf *buf,struct vecTris **tris,bool UV,bool customClr,bool wireframe){
+	void loadAndDrawTris(struct vecTrisBuf *buf,struct vecTris **tris,enum mode draw,bool customClr,bool wireframe){
 		target->setActive(true);
 		resetBindings();
 		
@@ -363,7 +366,23 @@ namespace render{
 			useShader();
 			vw::norm::vecGL::apply(*target,0.0,0.0,1.0,1.0);
 			
-			unsigned int vertMode = UV ? 2 : 1;
+			unsigned int vertMode;
+			
+			switch(draw){
+				case MODE_XY:
+					vertMode = 1;
+					
+					break;
+				case MODE_UV:
+					vertMode = 2;
+					
+					break;
+				case MODE_POSE:
+					vertMode = 3;
+					pose::upload();
+					
+					break;
+			}
 			
 			if(wireframe){
 				// Fill

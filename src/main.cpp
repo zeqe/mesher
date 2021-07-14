@@ -162,6 +162,8 @@ enum vertLayer::viewType stateView(){
 			return vertLayer::VIEW_COLORS;
 		case STATE_V_BONES:
 			return vertLayer::VIEW_BONES;
+		case STATE_POSE:
+			return vertLayer::VIEW_POSE;
 		default:
 			return vertLayer::VIEW_XY;
 	}
@@ -242,7 +244,7 @@ int main(){
 	
 	bool showHelp = true;
 	
-	while(window.isOpen()&& run){
+	while(window.isOpen() && run){
 		// Drawing -------------------------------------
 		window.clear();
 		
@@ -605,9 +607,7 @@ int main(){
 							break;
 						case STATED_KI(STATE_ATOP_POSE_TRANSFORM,0,0,0,KEY_ESC):
 							trOp::exit();
-							
 							pose::clearUnappliedModifiers();
-							pose::calculateGlobalTransformations();
 							
 							state = STATE_POSE;
 							
@@ -790,8 +790,6 @@ int main(){
 											break;
 										case TROP_STATE_UPDATE:
 											pose::updateModifiers(true,currBone);
-											pose::calculateGlobalTransformations();
-											
 											trOp::exit();
 											
 											state = STATE_POSE;
@@ -865,7 +863,6 @@ int main(){
 					
 					if(state == STATE_ATOP_POSE_TRANSFORM && trOp::dirty()){
 						pose::updateModifiers(false,currBone);
-						pose::calculateGlobalTransformations();
 					}
 					
 					break;
@@ -883,6 +880,8 @@ int main(){
 				default:
 					break;
 			}
+			
+			pose::update();
 		}
 	}
 	

@@ -91,7 +91,7 @@ namespace triCn{
 			}
 			
 			// Drawing
-			render::loadAndDrawTris(&constructBuf,&constructTri,false,false,wireframe);
+			render::loadAndDrawTris(&constructBuf,&constructTri,render::MODE_XY,false,wireframe);
 		}
 		
 		// Draw vertices placed

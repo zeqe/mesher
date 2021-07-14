@@ -26,8 +26,14 @@
 	}
 	
 	namespace render{
+		enum mode{
+			MODE_XY,
+			MODE_UV,
+			MODE_POSE
+		};
+		
 		void setColors(enum clr::profile mAr,enum clr::profile wAr);
-		void loadAndDrawTris(struct vecTrisBuf *buf,struct vecTris **tris,bool UV,bool customClr,bool wireframe);
+		void loadAndDrawTris(struct vecTrisBuf *buf,struct vecTris **tris,enum mode draw,bool customClr,bool wireframe);
 	}
 	
 	namespace hud{

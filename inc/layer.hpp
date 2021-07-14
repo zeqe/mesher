@@ -55,7 +55,8 @@
 				VIEW_XY,
 				VIEW_UV,
 				VIEW_COLORS,
-				VIEW_BONES
+				VIEW_BONES,
+				VIEW_POSE
 			};
 			
 		private:
