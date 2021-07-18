@@ -1,6 +1,7 @@
 #include <cmath>
 
 #include <iostream>
+#include <string>
 
 #include <GL/glew.h>
 
@@ -200,6 +201,26 @@ sf::Vector2f helpGeneralDimensions[4];
 sf::Vector2f helpStateDimensions[STATE_COUNT];
 
 namespace graphics{
+	sf::Vector2f calculateStringDimensions(std::string in){
+		sf::Vector2f dimensions(0.0,0.0);
+		
+		unsigned int lastAfterNewline = 0;
+		
+		for(unsigned int i = 0;i < in.length();++i){
+			if(in[i] == '\n'){
+				dimensions.y += 1.0;
+				
+				if(i - lastAfterNewline > dimensions.x){
+					dimensions.x = i - lastAfterNewline;
+				}
+				
+				lastAfterNewline = i + 1;
+			}
+		}
+		
+		return dimensions;
+	}
+	
 	bool load(sf::RenderTarget &newTarget,const char *hudFontPath){
 		// Target
 		target = &newTarget;
@@ -319,26 +340,6 @@ namespace graphics{
 		maxX = target->getView().getCenter().x + (viewWidth / 2.0);
 		minY = target->getView().getCenter().y - (viewHeight / 2.0);
 		maxY = target->getView().getCenter().y + (viewHeight / 2.0);
-	}
-	
-	sf::Vector2f calculateStringDimensions(std::string in){
-		sf::Vector2f dimensions(0.0,0.0);
-		
-		unsigned int lastAfterNewline = 0;
-		
-		for(unsigned int i = 0;i < in.length();++i){
-			if(in[i] == '\n'){
-				dimensions.y += 1.0;
-				
-				if(i - lastAfterNewline > dimensions.x){
-					dimensions.x = i - lastAfterNewline;
-				}
-				
-				lastAfterNewline = i + 1;
-			}
-		}
-		
-		return dimensions;
 	}
 }
 
@@ -566,14 +567,14 @@ namespace hud{
 		target->draw(hudText);
 	}
 	
-	void drawBottomBar(const std::string &line,bool snapOn,bool showTris,unsigned char currTri){
+	void drawBottomBar(const char *line,bool snapOn,bool showTris,unsigned char currTri){
 		// Background
 		hudBack.setSize(sf::Vector2f(viewWidth,charHeight * 3.0));
 		hudBack.setPosition(charPosition(cBL,0.0,2.0));
 		target->draw(hudBack);
 		
 		// Text
-		hudText.setString(line);
+		hudText.setString(std::string(line));
 		hudText.setPosition(charPosition(cBL,2.0,0.5));
 		hudText.setFillColor(sf::Color(0xffffffff));
 		target->draw(hudText);
@@ -683,27 +684,27 @@ namespace hud{
 		target->draw(hudText);
 	}
 	
-	void drawCustomColorsReff(unsigned char currColor,const char *altCurrColorHex){
-		#define COLREFF_CHLPAD 1
-		#define COLREFF_CHRPAD 2
-		#define COLREFF_CVPAD 1.5
+	void drawCustomColorsRef(unsigned char currColor,const char *altCurrColorHex){
+		#define COLREF_CHLPAD 1
+		#define COLREF_CHRPAD 2
+		#define COLREF_CVPAD 1.5
 		
-		#define COLREFF_ICWIDTH 16
+		#define COLREF_ICWIDTH 16
 		
-		#define COLREFF_IHEIGHT (CLR_RANBW_COUNT * 2)
-		#define COLREFF_IWIDTH (COLOR_ARRAY_MAX_COUNT / COLREFF_IHEIGHT)
+		#define COLREF_IHEIGHT (CLR_RANBW_COUNT * 2)
+		#define COLREF_IWIDTH (COLOR_ARRAY_MAX_COUNT / COLREF_IHEIGHT)
 		
-		#define COLREFF_CHEIGHT (COLREFF_IHEIGHT + (COLREFF_CVPAD * 2.0))
-		#define COLREFF_CWIDTH ((COLREFF_ICWIDTH * COLREFF_IWIDTH) + COLREFF_CHLPAD + COLREFF_CHRPAD)
+		#define COLREF_CHEIGHT (COLREF_IHEIGHT + (COLREF_CVPAD * 2.0))
+		#define COLREF_CWIDTH ((COLREF_ICWIDTH * COLREF_IWIDTH) + COLREF_CHLPAD + COLREF_CHRPAD)
 		
-		#define COLREFF_CTOP (COLREFF_CHEIGHT + 2.0)
+		#define COLREF_CTOP (COLREF_CHEIGHT + 2.0)
 		
-		#define COLREFF_ICX(i) (COLREFF_CWIDTH - COLREFF_CHLPAD - (COLREFF_ICWIDTH * ((i / COLREFF_IHEIGHT) + 1)))
-		#define COLREFF_ICY(i) (COLREFF_CTOP - COLREFF_CVPAD - (i % COLREFF_IHEIGHT) - 1.0)
+		#define COLREF_ICX(i) (COLREF_CWIDTH - COLREF_CHLPAD - (COLREF_ICWIDTH * ((i / COLREF_IHEIGHT) + 1)))
+		#define COLREF_ICY(i) (COLREF_CTOP - COLREF_CVPAD - (i % COLREF_IHEIGHT) - 1.0)
 		
 		// Background
-		hudBack.setPosition(charPosition(cBR,COLREFF_CWIDTH,COLREFF_CTOP));
-		hudBack.setSize(sf::Vector2f(COLREFF_CWIDTH * charWidth,COLREFF_CHEIGHT * charHeight));
+		hudBack.setPosition(charPosition(cBR,COLREF_CWIDTH,COLREF_CTOP));
+		hudBack.setSize(sf::Vector2f(COLREF_CWIDTH * charWidth,COLREF_CHEIGHT * charHeight));
 		target->draw(hudBack);
 		
 		// Items
@@ -716,14 +717,14 @@ namespace hud{
 		
 		for(unsigned int i = 0;i < COLOR_ARRAY_MAX_COUNT;++i){
 			// Custom Color Background
-			colorBack.setPosition(charPosition(cBR,COLREFF_ICX(i) + 10.5,COLREFF_ICY(i) + 1.0));
+			colorBack.setPosition(charPosition(cBR,COLREF_ICX(i) + 10.5,COLREF_ICY(i) + 1.0));
 			colorBack.setSize(sf::Vector2f(10.5 * charWidth,charHeight));
 			colorBack.setFillColor(sf::Color((clrCstm::get(i) & 0xffffff00) | clr::getAlpha(clr::ALF_HALF)));
 			target->draw(colorBack);
 			
 			// Current Color Highlight
 			if(i == currI){
-				colorBack.setPosition(charPosition(cBR,COLREFF_ICX(i) + 15,COLREFF_ICY(i) + 1.0));
+				colorBack.setPosition(charPosition(cBR,COLREF_ICX(i) + 15,COLREF_ICY(i) + 1.0));
 				colorBack.setSize(sf::Vector2f(4.5 * charWidth,charHeight));
 				colorBack.setFillColor(sf::Color(0xffffffff));
 				target->draw(colorBack);
@@ -738,14 +739,14 @@ namespace hud{
 				}
 				
 				hudText.setString(std::string(textBuffer));
-				hudText.setPosition(charPosition(cBR,COLREFF_ICX(i) + 9,COLREFF_ICY(i)));
+				hudText.setPosition(charPosition(cBR,COLREF_ICX(i) + 9,COLREF_ICY(i)));
 				hudText.setFillColor(sf::Color(0xffffffff));
 				target->draw(hudText);
 				
 				sprintf(textBuffer,"%2d",i);
 				
 				hudText.setString(std::string(textBuffer));
-				hudText.setPosition(charPosition(cBR,COLREFF_ICX(i) + 14,COLREFF_ICY(i)));
+				hudText.setPosition(charPosition(cBR,COLREF_ICX(i) + 14,COLREF_ICY(i)));
 				hudText.setFillColor(sf::Color(0x000000ff));
 				target->draw(hudText);
 				
@@ -753,7 +754,7 @@ namespace hud{
 				sprintf(textBuffer,"%2d   %08x",i,clrCstm::get(i));
 				
 				hudText.setString(std::string(textBuffer));
-				hudText.setPosition(charPosition(cBR,COLREFF_ICX(i) + 14,COLREFF_ICY(i)));
+				hudText.setPosition(charPosition(cBR,COLREF_ICX(i) + 14,COLREF_ICY(i)));
 				hudText.setFillColor(sf::Color(0xffffffff));
 				target->draw(hudText);
 			}
@@ -761,31 +762,31 @@ namespace hud{
 			// Mark
 			drawn = marks[markShape(i)];
 			drawn->setFillColor(sf::Color(markColor(i,clr::ALF_ONE)));
-			target->draw(*drawn,sf::RenderStates(sf::Transform().translate(charPosition(cBR,COLREFF_ICX(i) + 10.5,COLREFF_ICY(i) + 0.5))));
+			target->draw(*drawn,sf::RenderStates(sf::Transform().translate(charPosition(cBR,COLREF_ICX(i) + 10.5,COLREF_ICY(i) + 0.5))));
 		}
 	}
 	
-	void drawVBonesReff(unsigned char currBone){
-		#define VBNEREFF_CHLPAD 1
-		#define VBNEREFF_CHRPAD 2
-		#define VBNEREFF_CVPAD 1.5
+	void drawVBonesRef(unsigned char currBone){
+		#define VBNEREF_CHLPAD 1
+		#define VBNEREF_CHRPAD 2
+		#define VBNEREF_CVPAD 1.5
 		
-		#define VBNEREFF_ICWIDTH 7
+		#define VBNEREF_ICWIDTH 7
 		
-		#define VBNEREFF_IHEIGHT (CLR_RANBW_COUNT * 2)
-		#define VBNEREFF_IWIDTH (BONES_MAX_COUNT / VBNEREFF_IHEIGHT)
+		#define VBNEREF_IHEIGHT (CLR_RANBW_COUNT * 2)
+		#define VBNEREF_IWIDTH (BONES_MAX_COUNT / VBNEREF_IHEIGHT)
 		
-		#define VBNEREFF_CHEIGHT (VBNEREFF_IHEIGHT + (VBNEREFF_CVPAD * 2.0))
-		#define VBNEREFF_CWIDTH ((VBNEREFF_ICWIDTH * VBNEREFF_IWIDTH) + VBNEREFF_CHLPAD + VBNEREFF_CHRPAD)
+		#define VBNEREF_CHEIGHT (VBNEREF_IHEIGHT + (VBNEREF_CVPAD * 2.0))
+		#define VBNEREF_CWIDTH ((VBNEREF_ICWIDTH * VBNEREF_IWIDTH) + VBNEREF_CHLPAD + VBNEREF_CHRPAD)
 		
-		#define VBNEREFF_CTOP (VBNEREFF_CHEIGHT + 2.0)
+		#define VBNEREF_CTOP (VBNEREF_CHEIGHT + 2.0)
 		
-		#define VBNEREFF_ICX(i) (VBNEREFF_CWIDTH - VBNEREFF_CHLPAD - (VBNEREFF_ICWIDTH * ((i / VBNEREFF_IHEIGHT) + 1)))
-		#define VBNEREFF_ICY(i) (VBNEREFF_CTOP - VBNEREFF_CVPAD - (i % VBNEREFF_IHEIGHT) - 1.0)
+		#define VBNEREF_ICX(i) (VBNEREF_CWIDTH - VBNEREF_CHLPAD - (VBNEREF_ICWIDTH * ((i / VBNEREF_IHEIGHT) + 1)))
+		#define VBNEREF_ICY(i) (VBNEREF_CTOP - VBNEREF_CVPAD - (i % VBNEREF_IHEIGHT) - 1.0)
 		
 		// Background
-		hudBack.setPosition(charPosition(cBR,VBNEREFF_CWIDTH,VBNEREFF_CTOP));
-		hudBack.setSize(sf::Vector2f(VBNEREFF_CWIDTH * charWidth,VBNEREFF_CHEIGHT * charHeight));
+		hudBack.setPosition(charPosition(cBR,VBNEREF_CWIDTH,VBNEREF_CTOP));
+		hudBack.setSize(sf::Vector2f(VBNEREF_CWIDTH * charWidth,VBNEREF_CHEIGHT * charHeight));
 		target->draw(hudBack);
 		
 		// Items
@@ -799,7 +800,7 @@ namespace hud{
 		for(unsigned int i = 0;i < BONES_MAX_COUNT;++i){
 			// Current Bone Highlight
 			if(i == currI){
-				colorBack.setPosition(charPosition(cBR,VBNEREFF_ICX(i) + 6,VBNEREFF_ICY(i) + 1.0));
+				colorBack.setPosition(charPosition(cBR,VBNEREF_ICX(i) + 6,VBNEREF_ICY(i) + 1.0));
 				colorBack.setSize(sf::Vector2f(4.5 * charWidth,charHeight));
 				colorBack.setFillColor(sf::Color(0xffffffff));
 				target->draw(colorBack);
@@ -809,38 +810,38 @@ namespace hud{
 			sprintf(textBuffer,"%2d",i);
 			
 			hudText.setString(std::string(textBuffer));
-			hudText.setPosition(charPosition(cBR,VBNEREFF_ICX(i) + 5,VBNEREFF_ICY(i)));
+			hudText.setPosition(charPosition(cBR,VBNEREF_ICX(i) + 5,VBNEREF_ICY(i)));
 			hudText.setFillColor(sf::Color(i == currI ? 0x000000ff : 0xffffffff));
 			target->draw(hudText);
 			
 			// Mark
 			drawn = marks[markShape(i)];
 			drawn->setFillColor(sf::Color(markColor(i,clr::ALF_ONE)));
-			target->draw(*drawn,sf::RenderStates(sf::Transform().translate(charPosition(cBR,VBNEREFF_ICX(i) + 1.5,VBNEREFF_ICY(i) + 0.5))));
+			target->draw(*drawn,sf::RenderStates(sf::Transform().translate(charPosition(cBR,VBNEREF_ICX(i) + 1.5,VBNEREF_ICY(i) + 0.5))));
 		}
 	}
 	
-	void drawBonesReff(unsigned char currBone,const char *altCurrBoneParent){
-		#define BNEREFF_CHLPAD 1
-		#define BNEREFF_CHRPAD 2
-		#define BNEREFF_CVPAD 1.5
+	void drawBonesRef(unsigned char currBone,const char *altCurrBoneParent){
+		#define BNEREF_CHLPAD 1
+		#define BNEREF_CHRPAD 2
+		#define BNEREF_CVPAD 1.5
 		
-		#define BNEREFF_ICWIDTH 11
+		#define BNEREF_ICWIDTH 11
 		
-		#define BNEREFF_IHEIGHT (CLR_RANBW_COUNT * 2)
-		#define BNEREFF_IWIDTH (BONES_MAX_COUNT / BNEREFF_IHEIGHT)
+		#define BNEREF_IHEIGHT (CLR_RANBW_COUNT * 2)
+		#define BNEREF_IWIDTH (BONES_MAX_COUNT / BNEREF_IHEIGHT)
 		
-		#define BNEREFF_CHEIGHT (BNEREFF_IHEIGHT + (BNEREFF_CVPAD * 2.0))
-		#define BNEREFF_CWIDTH ((BNEREFF_ICWIDTH * BNEREFF_IWIDTH) + BNEREFF_CHLPAD + BNEREFF_CHRPAD)
+		#define BNEREF_CHEIGHT (BNEREF_IHEIGHT + (BNEREF_CVPAD * 2.0))
+		#define BNEREF_CWIDTH ((BNEREF_ICWIDTH * BNEREF_IWIDTH) + BNEREF_CHLPAD + BNEREF_CHRPAD)
 		
-		#define BNEREFF_CTOP (BNEREFF_CHEIGHT + 2.0)
+		#define BNEREF_CTOP (BNEREF_CHEIGHT + 2.0)
 		
-		#define BNEREFF_ICX(i) (BNEREFF_CWIDTH - BNEREFF_CHLPAD - (BNEREFF_ICWIDTH * ((i / BNEREFF_IHEIGHT) + 1)))
-		#define BNEREFF_ICY(i) (BNEREFF_CTOP - BNEREFF_CVPAD - (i % BNEREFF_IHEIGHT) - 1.0)
+		#define BNEREF_ICX(i) (BNEREF_CWIDTH - BNEREF_CHLPAD - (BNEREF_ICWIDTH * ((i / BNEREF_IHEIGHT) + 1)))
+		#define BNEREF_ICY(i) (BNEREF_CTOP - BNEREF_CVPAD - (i % BNEREF_IHEIGHT) - 1.0)
 		
 		// Background
-		hudBack.setPosition(charPosition(cBR,BNEREFF_CWIDTH,BNEREFF_CTOP));
-		hudBack.setSize(sf::Vector2f(BNEREFF_CWIDTH * charWidth,BNEREFF_CHEIGHT * charHeight));
+		hudBack.setPosition(charPosition(cBR,BNEREF_CWIDTH,BNEREF_CTOP));
+		hudBack.setSize(sf::Vector2f(BNEREF_CWIDTH * charWidth,BNEREF_CHEIGHT * charHeight));
 		target->draw(hudBack);
 		
 		// Items
@@ -854,7 +855,7 @@ namespace hud{
 		for(unsigned int i = 0;i < BONES_MAX_COUNT;++i){
 			// Current Bone Highlight
 			if(i == currI){
-				colorBack.setPosition(charPosition(cBR,BNEREFF_ICX(i) + 10,BNEREFF_ICY(i) + 1.0));
+				colorBack.setPosition(charPosition(cBR,BNEREF_ICX(i) + 10,BNEREF_ICY(i) + 1.0));
 				colorBack.setSize(sf::Vector2f(4.5 * charWidth,charHeight));
 				colorBack.setFillColor(sf::Color(0xffffffff));
 				target->draw(colorBack);
@@ -864,7 +865,7 @@ namespace hud{
 			sprintf(textBuffer,"%2d",i);
 			
 			hudText.setString(std::string(textBuffer));
-			hudText.setPosition(charPosition(cBR,BNEREFF_ICX(i) + 9,BNEREFF_ICY(i)));
+			hudText.setPosition(charPosition(cBR,BNEREF_ICX(i) + 9,BNEREF_ICY(i)));
 			hudText.setFillColor(sf::Color(i == currI ? 0x000000ff : 0xffffffff));
 			target->draw(hudText);
 			
@@ -880,14 +881,14 @@ namespace hud{
 			}
 			
 			hudText.setString(std::string(textBuffer));
-			hudText.setPosition(charPosition(cBR,BNEREFF_ICX(i) + 4,BNEREFF_ICY(i)));
+			hudText.setPosition(charPosition(cBR,BNEREF_ICX(i) + 4,BNEREF_ICY(i)));
 			hudText.setFillColor(sf::Color(0xffffffff));
 			target->draw(hudText);
 			
 			// Mark
 			drawn = marks[markShape(i)];
 			drawn->setFillColor(sf::Color(markColor(i,clr::ALF_ONE)));
-			target->draw(*drawn,sf::RenderStates(sf::Transform().translate(charPosition(cBR,BNEREFF_ICX(i) + 5.5,BNEREFF_ICY(i) + 0.5))));
+			target->draw(*drawn,sf::RenderStates(sf::Transform().translate(charPosition(cBR,BNEREF_ICX(i) + 5.5,BNEREF_ICY(i) + 0.5))));
 		}
 	}
 	
@@ -970,5 +971,50 @@ namespace hud{
 			*rect,
 			sf::RenderStates(sf::Transform().translate(vw::norm::transform().transformPoint(vw::norm::toD(x),vw::norm::toD(y))))
 		);
+	}
+	
+	namespace ref{
+		bool loaded;
+		sf::Texture texture;
+		sf::Sprite sprite;
+		
+		bool load(const char *source){
+			bool thisLoaded = texture.loadFromFile(std::string(source));
+			loaded = loaded || thisLoaded;
+			
+			if(thisLoaded){
+				sprite.setTexture(texture,true);
+				sprite.setOrigin(sf::Vector2f(texture.getSize()) / 2.0f);
+				
+				sf::Vector2u size = texture.getSize();
+				float maxHalfDim = (float)((size.x > size.y ? size.x : size.y) / 2);
+				
+				sprite.setScale(1.0 / maxHalfDim,1.0 / maxHalfDim);
+			}
+			
+			return thisLoaded;
+		}
+		
+		void setSmooth(bool smooth){
+			texture.setSmooth(smooth);
+		}
+		
+		void draw(){
+			if(!loaded){
+				return;
+			}
+			
+			target->draw(
+				sprite,
+				sf::RenderStates(
+					sf::Transform().translate(
+						vw::norm::transform().transformPoint(vw::norm::toD(0),vw::norm::toD(0))
+					).scale(
+						vw::norm::getZoomScale(),
+						vw::norm::getZoomScale()
+					)
+				)
+			);
+		}
 	}
 }

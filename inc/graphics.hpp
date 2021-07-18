@@ -1,7 +1,5 @@
-#ifndef HUD_INCLUDED
+#ifndef GRAPHICS_INCLUDED
 	#include <cstdint>
-	
-	#include <string>
 	#include <vector>
 	
 	#include <SFML/Graphics.hpp>
@@ -22,7 +20,6 @@
 		void free();
 		
 		void calculateTargetDimensions();
-		sf::Vector2f calculateStringDimensions(std::string in);
 	}
 	
 	namespace render{
@@ -52,11 +49,11 @@
 		
 		void drawStateState(enum mesherState state);
 		void drawHelp(enum mesherState state);
-		void drawBottomBar(const std::string &line,bool snapOn,bool showTris,unsigned char currTri);
+		void drawBottomBar(const char *line,bool snapOn,bool showTris,unsigned char currTri);
 		void drawLayerNav(std::vector<class vertLayer *> &layers,unsigned int currLayer,const char *altCurrLayerName,class gridLayer *grid,const char *altGridDisplay);
-		void drawCustomColorsReff(unsigned char currColor,const char *altCurrColorHex);
-		void drawVBonesReff(unsigned char currBone);
-		void drawBonesReff(unsigned char currBone,const char *altCurrBoneParent);
+		void drawCustomColorsRef(unsigned char currColor,const char *altCurrColorHex);
+		void drawVBonesRef(unsigned char currBone);
+		void drawBonesRef(unsigned char currBone,const char *altCurrBoneParent);
 		
 		// Drawing Dynamic Model-State-Dependant UI
 		void drawCircle(int32_t x,int32_t y,bool isRadNorm,float radius,uint32_t color);
@@ -71,7 +68,15 @@
 		};
 		
 		void drawLine(enum lineType type,int16_t x,int16_t y,float len,uint32_t color);
+		
+		// Reference
+		namespace ref{
+			bool load(const char *source);
+			void setSmooth(bool smooth);
+			
+			void draw();
+		}
 	}
 	
-	#define HUD_INCLUDED
+	#define GRAPHICS_INCLUDED
 #endif

@@ -221,6 +221,8 @@ int main(){
 	// Global State ----------------------------------------
 	srand(time(0));
 	
+	bool showHelp = true;
+	
 	bool snap = false,wireframe = false;
 	class layer *nearestLayer = NULL;
 	int16_t iX,iY,mX,mY;
@@ -231,7 +233,7 @@ int main(){
 	unsigned char currClr = 0;
 	unsigned char currBone = 0;
 	
-	bool showHelp = true;
+	bool smoothRef = false;
 	
 	// Temporary variables ----------------------------------
 	char textBuffer[STRIN_MAX_LEN + 50];
@@ -258,6 +260,7 @@ int main(){
 		window.clear();
 		
 		// Content render
+		hud::ref::draw();
 		hud::drawCenter();
 		
 		grid.draw();
@@ -295,17 +298,17 @@ int main(){
 		switch(state){
 			case STATE_V_COLORS:
 			case STATE_ATOP_COLOR_SET:
-				hud::drawCustomColorsReff(currClr,state == STATE_ATOP_COLOR_SET ? strIn::buffer() : NULL);
+				hud::drawCustomColorsRef(currClr,state == STATE_ATOP_COLOR_SET ? strIn::buffer() : NULL);
 				
 				break;
 			case STATE_V_BONES:
 			case STATE_POSE:
-				hud::drawVBonesReff(currBone);
+				hud::drawVBonesRef(currBone);
 				
 				break;
 			case STATE_BONES:
 			case STATE_ATOP_BONE_PARENT_SET:
-				hud::drawBonesReff(currBone,state == STATE_ATOP_BONE_PARENT_SET ? strIn::buffer() : NULL);
+				hud::drawBonesRef(currBone,state == STATE_ATOP_BONE_PARENT_SET ? strIn::buffer() : NULL);
 				
 				break;
 			default:
@@ -328,7 +331,7 @@ int main(){
 			);
 		}
 		
-		hud::drawBottomBar(std::string(textBuffer),snap,state == STATE_ATOP_TRI_ADD,triType);
+		hud::drawBottomBar(textBuffer,snap,state == STATE_ATOP_TRI_ADD,triType);
 		
 		hud::drawLayerNav(
 			layers,
@@ -462,6 +465,11 @@ int main(){
 								if(currLayerValid()){
 									layers[currLayer]->visibilityToggle();
 								}
+								
+								break;
+							case STATELESS_KI(0,0,1,KEY_S):
+								smoothRef = !smoothRef;
+								hud::ref::setSmooth(smoothRef);
 								
 								break;
 							default:
@@ -646,13 +654,17 @@ int main(){
 								
 								commandFeedbackDisp = true;
 								
-								if(strcmp(commandStr,"loadreff") == 0){
+								if(strcmp(commandStr,"loadref") == 0){
 									commandStr = strtok(NULL," ");
 									
 									if(commandStr == NULL){
 										sprintf(commandFeedback,"Reference source needed");
 									}else{
-										sprintf(commandFeedback,"Loaded reference from \'%s\'",commandStr);
+										if(hud::ref::load(commandStr)){
+											sprintf(commandFeedback,"Loaded reference from \'%s\'",commandStr);
+										}else{
+											sprintf(commandFeedback,"Unable to load reference from \'%s\'",commandStr);
+										}
 									}
 								}else{
 									sprintf(commandFeedback,"Unknown command");
