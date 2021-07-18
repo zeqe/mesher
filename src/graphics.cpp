@@ -875,7 +875,7 @@ namespace hud{
 				if(bones::getParent(i) < BONES_MAX_COUNT){
 					sprintf(textBuffer,"<%2d",bones::getParent(i));
 				}else{
-					sprintf(textBuffer,"<__");
+					sprintf(textBuffer,"<--");
 				}
 			}
 			

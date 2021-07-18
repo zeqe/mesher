@@ -10,7 +10,7 @@ namespace strIn{
 	unsigned int currI;
 	
 	void demarkateEnd(){
-		buff[currI] = ']';
+		buff[currI] = '_';
 		buff[currI + 1] = '\0';
 	}
 	
@@ -63,7 +63,7 @@ namespace strIn{
 					break;
 				}
 				
-				if(isalnum(newChar) || newChar == ' ' || newChar == '_'){
+				if(isalnum(newChar) || newChar == ' ' || newChar == '_'  || newChar == '-'  || newChar == '.'  || newChar == '/'){
 					buff[currI] = newChar;
 					++currI;
 					
@@ -74,6 +74,15 @@ namespace strIn{
 		}
 		
 		return false;
+	}
+	
+	void clear(){
+		if(!building){
+			return;
+		}
+		
+		currI = 0;
+		demarkateEnd();
 	}
 	
 	const char *buffer(){

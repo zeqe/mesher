@@ -10,6 +10,8 @@
 		
 		// Use
 		bool interpret(char newChar);
+		void clear();
+		
 		const char *buffer();
 	}
 	

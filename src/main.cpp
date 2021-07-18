@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstring>
 
 #include <vector>
 #include <sstream>
@@ -220,12 +221,6 @@ int main(){
 	// Global State ----------------------------------------
 	srand(time(0));
 	
-	char textBuffer[STRIN_MAX_LEN + 50];
-	
-	bool isCtrlDown,isAltDown,isShiftDown;
-	enum keyInput keyIn;
-	int statelessKI;
-	
 	bool snap = false,wireframe = false;
 	class layer *nearestLayer = NULL;
 	int16_t iX,iY,mX,mY;
@@ -236,13 +231,27 @@ int main(){
 	unsigned char currClr = 0;
 	unsigned char currBone = 0;
 	
+	bool showHelp = true;
+	
+	// Temporary variables ----------------------------------
+	char textBuffer[STRIN_MAX_LEN + 50];
+	
+	bool isCtrlDown,isAltDown,isShiftDown;
+	enum keyInput keyIn;
+	int statelessKI;
+	
 	sf::Vector2<int32_t> tempPos;
+	
+	#define COMMAND_PARAM_COUNT 5
+	uint32_t commandParams[COMMAND_PARAM_COUNT];
+	char *commandStr = NULL;
+	
+	char commandFeedback[STRIN_MAX_LEN + 40];
+	bool commandFeedbackDisp = false;
 	
 	// Loop & Loop State -----------------------------------
 	bool run = true;
 	sf::Event event;
-	
-	bool showHelp = true;
 	
 	while(window.isOpen() && run){
 		// Drawing -------------------------------------
@@ -283,18 +292,6 @@ int main(){
 			hud::drawHelp(state);
 		}
 		
-		if(state == STATE_CONSOLE){
-			sprintf(textBuffer,":%s",strIn::buffer());
-		}else{
-			sprintf(
-				textBuffer,
-				"zoom: %-+d | x%-8.*f",
-				vw::zoomLevel(),
-				vw::zoomFactor() < 1.0 ? 6 : 2,
-				vw::zoomFactor()
-			);
-		}
-		
 		switch(state){
 			case STATE_V_COLORS:
 			case STATE_ATOP_COLOR_SET:
@@ -313,6 +310,22 @@ int main(){
 				break;
 			default:
 				break;
+		}
+		
+		if(state == STATE_CONSOLE){
+			if(commandFeedbackDisp){
+				strcpy(textBuffer,commandFeedback);
+			}else{
+				sprintf(textBuffer,":%s",strIn::buffer());
+			}
+		}else{
+			sprintf(
+				textBuffer,
+				"zoom: %-+d | x%-8.*f",
+				vw::zoomLevel(),
+				vw::zoomFactor() < 1.0 ? 6 : 2,
+				vw::zoomFactor()
+			);
 		}
 		
 		hud::drawBottomBar(std::string(textBuffer),snap,state == STATE_ATOP_TRI_ADD,triType);
@@ -620,8 +633,32 @@ int main(){
 				case sf::Event::TextEntered:
 					switch(state){
 						case STATE_CONSOLE:
+							commandFeedbackDisp = false;
+							
 							if(strIn::interpret(event.text.unicode)){
+								strcpy(textBuffer,strIn::buffer());
+								commandStr = strtok(textBuffer," ");
 								
+								if(commandStr == NULL){
+									strIn::clear();
+									break;
+								}
+								
+								commandFeedbackDisp = true;
+								
+								if(strcmp(commandStr,"loadreff") == 0){
+									commandStr = strtok(NULL," ");
+									
+									if(commandStr == NULL){
+										sprintf(commandFeedback,"Reference source needed");
+									}else{
+										sprintf(commandFeedback,"Loaded reference from \'%s\'",commandStr);
+									}
+								}else{
+									sprintf(commandFeedback,"Unknown command");
+								}
+								
+								strIn::clear();
 							}
 							
 							break;
