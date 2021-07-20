@@ -233,8 +233,6 @@ int main(){
 	unsigned char currClr = 0;
 	unsigned char currBone = 0;
 	
-	bool smoothRef = false;
-	
 	// Temporary variables ----------------------------------
 	char textBuffer[STRIN_MAX_LEN + 50];
 	
@@ -245,7 +243,7 @@ int main(){
 	sf::Vector2<int32_t> tempPos;
 	
 	#define COMMAND_PARAM_COUNT 5
-	uint32_t commandParams[COMMAND_PARAM_COUNT];
+	// uint32_t commandParams[COMMAND_PARAM_COUNT];
 	char *commandStr = NULL;
 	
 	char commandFeedback[STRIN_MAX_LEN + 40];
@@ -468,8 +466,7 @@ int main(){
 								
 								break;
 							case STATELESS_KI(0,0,1,KEY_S):
-								smoothRef = !smoothRef;
-								hud::ref::setSmooth(smoothRef);
+								hud::ref::toggleSmooth();
 								
 								break;
 							default:
@@ -655,6 +652,7 @@ int main(){
 								commandFeedbackDisp = true;
 								
 								if(strcmp(commandStr,"loadref") == 0){
+									// Reference load -----------------------------------
 									commandStr = strtok(NULL," ");
 									
 									if(commandStr == NULL){
@@ -666,6 +664,29 @@ int main(){
 											sprintf(commandFeedback,"Unable to load reference from \'%s\'",commandStr);
 										}
 									}
+								}else if(strcmp(commandStr,"unloadref") == 0){
+									// Reference unload -----------------------------------
+									hud::ref::unload();
+									sprintf(commandFeedback,"Reference unloaded");
+									
+								}else if(strcmp(commandStr,"loadtex") == 0){
+									// Texture load -----------------------------------
+									commandStr = strtok(NULL," ");
+									
+									if(commandStr == NULL){
+										sprintf(commandFeedback,"Texture source needed");
+									}else{
+										if(render::tex::load(commandStr)){
+											sprintf(commandFeedback,"Loaded texture from \'%s\'",commandStr);
+										}else{
+											sprintf(commandFeedback,"Unable to load texture from \'%s\'",commandStr);
+										}
+									}
+								}else if(strcmp(commandStr,"unloadtex") == 0){
+									// Texture unload -----------------------------------
+									render::tex::unload();
+									sprintf(commandFeedback,"Texture unloaded");
+									
 								}else{
 									sprintf(commandFeedback,"Unknown command");
 								}

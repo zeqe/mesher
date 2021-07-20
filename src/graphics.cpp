@@ -39,6 +39,10 @@ const char SHADER_FRAG_CASES[] =
 	"case 1u:\n"
 		"fragColor = RGBA;\n"
 		"break;\n"
+	"case 2u:\n"
+		"fragClip();\n"
+		"fragColor = RGBA * texture(sampler0,UV);\n"
+		"break;\n"
 ;
 
 // Target
@@ -200,6 +204,70 @@ const std::string mesherHelpStates[STATE_COUNT] = {
 sf::Vector2f helpGeneralDimensions[4];
 sf::Vector2f helpStateDimensions[STATE_COUNT];
 
+// Loadable texture class
+class loadableTexture{
+	private:
+		bool loaded;
+		sf::Texture texture;
+		sf::Sprite sprite;
+		
+	public:
+		loadableTexture(){
+			loaded = false;
+		}
+		
+		bool load(const char *source){
+			bool thisLoaded = texture.loadFromFile(std::string(source));
+			loaded = loaded || thisLoaded;
+			
+			if(thisLoaded){
+				sprite.setTexture(texture,true);
+				sprite.setOrigin(sf::Vector2f(texture.getSize()) / 2.0f);
+				
+				sf::Vector2u size = texture.getSize();
+				float maxHalfDim = (float)((size.x > size.y ? size.x : size.y) / 2);
+				
+				sprite.setScale(1.0 / maxHalfDim,1.0 / maxHalfDim);
+			}
+			
+			return thisLoaded;
+		}
+		
+		void unload(){
+			loaded = false;
+		}
+		
+		void toggleSmooth(){
+			if(!loaded){
+				return;
+			}
+			
+			texture.setSmooth(!texture.isSmooth());
+		}
+		
+		void draw(){
+			if(!loaded){
+				return;
+			}
+			
+			target->draw(
+				sprite,
+				sf::RenderStates(
+					sf::Transform().translate(
+						vw::norm::transform().transformPoint(vw::norm::toD(0),vw::norm::toD(0))
+					).scale(
+						vw::norm::getZoomScale(),
+						vw::norm::getZoomScale()
+					)
+				)
+			);
+		}
+		
+		unsigned int glTex(){
+			return texture.getNativeHandle();
+		}
+};
+
 namespace graphics{
 	sf::Vector2f calculateStringDimensions(std::string in){
 		sf::Vector2f dimensions(0.0,0.0);
@@ -344,6 +412,26 @@ namespace graphics{
 }
 
 namespace render{
+	namespace tex{
+		class loadableTexture texTex;
+		
+		bool load(const char *source){
+			return texTex.load(source);
+		}
+		
+		void unload(){
+			texTex.unload();
+		}
+		
+		void toggleSmooth(){
+			texTex.toggleSmooth();
+		}
+		
+		void draw(){
+			texTex.draw();
+		}
+	}
+	
 	enum clr::profile meshPfl;
 	enum clr::profile wireframePfl;
 	
@@ -376,6 +464,7 @@ namespace render{
 					break;
 				case MODE_UV:
 					vertMode = 2;
+					bindTex0(tex::texTex.glTex());
 					
 					break;
 				case MODE_POSE:
@@ -393,7 +482,7 @@ namespace render{
 					clr::apply(clr::PFL_WHITE,CLR_WHITE_WHITE,clr::ALF_HALF,meshPfl);
 				}
 				
-				uniformVertFragModes(vertMode,0);
+				uniformVertFragModes(vertMode,draw == MODE_UV ? 2 : 0);
 				drawVecTris(*tris);
 				
 				// Outline
@@ -419,7 +508,7 @@ namespace render{
 					clr::apply(clr::PFL_WHITE,CLR_WHITE_WHITE,clr::ALF_ONE,meshPfl);
 				}
 				
-				uniformVertFragModes(vertMode,0);
+				uniformVertFragModes(vertMode,draw == MODE_UV ? 2 : 0);
 				drawVecTris(*tris);
 			}
 		}
@@ -974,47 +1063,22 @@ namespace hud{
 	}
 	
 	namespace ref{
-		bool loaded;
-		sf::Texture texture;
-		sf::Sprite sprite;
+		class loadableTexture refTex;
 		
 		bool load(const char *source){
-			bool thisLoaded = texture.loadFromFile(std::string(source));
-			loaded = loaded || thisLoaded;
-			
-			if(thisLoaded){
-				sprite.setTexture(texture,true);
-				sprite.setOrigin(sf::Vector2f(texture.getSize()) / 2.0f);
-				
-				sf::Vector2u size = texture.getSize();
-				float maxHalfDim = (float)((size.x > size.y ? size.x : size.y) / 2);
-				
-				sprite.setScale(1.0 / maxHalfDim,1.0 / maxHalfDim);
-			}
-			
-			return thisLoaded;
+			return refTex.load(source);
 		}
 		
-		void setSmooth(bool smooth){
-			texture.setSmooth(smooth);
+		void unload(){
+			refTex.unload();
+		}
+		
+		void toggleSmooth(){
+			refTex.toggleSmooth();
 		}
 		
 		void draw(){
-			if(!loaded){
-				return;
-			}
-			
-			target->draw(
-				sprite,
-				sf::RenderStates(
-					sf::Transform().translate(
-						vw::norm::transform().transformPoint(vw::norm::toD(0),vw::norm::toD(0))
-					).scale(
-						vw::norm::getZoomScale(),
-						vw::norm::getZoomScale()
-					)
-				)
-			);
+			refTex.draw();
 		}
 	}
 }

@@ -23,6 +23,16 @@
 	}
 	
 	namespace render{
+		// Texture
+		namespace tex{
+			bool load(const char *source);
+			void unload();
+			
+			void toggleSmooth();
+			void draw();
+		}
+		
+		// Rendering
 		enum mode{
 			MODE_XY,
 			MODE_UV,
@@ -72,8 +82,9 @@
 		// Reference
 		namespace ref{
 			bool load(const char *source);
-			void setSmooth(bool smooth);
+			void unload();
 			
+			void toggleSmooth();
 			void draw();
 		}
 	}
