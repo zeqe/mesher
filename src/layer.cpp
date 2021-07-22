@@ -104,8 +104,12 @@ class layer *layer::withNearestPoint(std::vector<class layer *> &layers){
 
 #define NO_NEAR_ELMNT (UINT_MAX)
 
-unsigned int vertLayer::BUFF_XYUV_COUNT(){
-	return maxTris * TRI_XYUV_VALUE_COUNT;
+unsigned int vertLayer::BUFF_XY_COUNT(){
+	return maxTris * TRI_XY_VALUE_COUNT;
+}
+
+unsigned int vertLayer::BUFF_UV_COUNT(){
+	return maxTris * TRI_UV_VALUE_COUNT;
 }
 
 unsigned int vertLayer::BUFF_TBC_COUNT(){
@@ -135,11 +139,13 @@ void vertLayer::init(unsigned int maxTriCount,enum viewType initView){
 	
 	// Buffers
 	buffer.count = 0;
-	buffer.xyuv = new int16_t[BUFF_XYUV_COUNT()];
+	buffer.xy = new int16_t[BUFF_XY_COUNT()];
+	buffer.uv = new uint16_t[BUFF_UV_COUNT()];
 	buffer.tbc = new uint8_t[BUFF_TBC_COUNT()];
 	
 	disp.count = 0;
-	disp.xyuv = new int16_t[BUFF_XYUV_COUNT()];
+	disp.xy = new int16_t[BUFF_XY_COUNT()];
+	disp.uv = new uint16_t[BUFF_UV_COUNT()];
 	disp.tbc = new uint8_t[BUFF_TBC_COUNT()];
 	
 	dispTris = NULL;
@@ -169,10 +175,12 @@ void vertLayer::init(unsigned int maxTriCount,enum viewType initView){
 
 void vertLayer::end(){
 	// Buffers
-	delete[] buffer.xyuv;
+	delete[] buffer.xy;
+	delete[] buffer.uv;
 	delete[] buffer.tbc;
 	
-	delete[] disp.xyuv;
+	delete[] disp.xy;
+	delete[] disp.uv;
 	delete[] disp.tbc;
 	
 	deleteVecTris(dispTris);
@@ -183,7 +191,8 @@ void vertLayer::end(){
 }
 
 void vertLayer::copyTri(struct vecTrisBuf *src,unsigned int srcI,struct vecTrisBuf *dest,unsigned int destI){
-	memcpy(dest->xyuv + destI * TRI_XYUV_VALUE_COUNT,src->xyuv + srcI * TRI_XYUV_VALUE_COUNT,TRI_XYUV_VALUE_COUNT * sizeof(int16_t));
+	memcpy(dest->xy + destI * TRI_XY_VALUE_COUNT,src->xy + srcI * TRI_XY_VALUE_COUNT,TRI_XY_VALUE_COUNT * sizeof(int16_t));
+	memcpy(dest->uv + destI * TRI_UV_VALUE_COUNT,src->uv + srcI * TRI_UV_VALUE_COUNT,TRI_UV_VALUE_COUNT * sizeof(uint16_t));
 	memcpy(dest->tbc + destI * TRI_TBC_VALUE_COUNT,src->tbc + srcI * TRI_TBC_VALUE_COUNT,TRI_TBC_VALUE_COUNT * sizeof(uint8_t));
 }
 
@@ -365,7 +374,8 @@ void vertLayer::draw(bool wireframe,bool showNearestPoint){
 	if(modified || vertModifiers_Applicable()){
 		// Copying to display buffer
 		disp.count = buffer.count;
-		memcpy(disp.xyuv,buffer.xyuv,buffer.count * TRI_XYUV_VALUE_COUNT * sizeof(uint16_t));
+		memcpy(disp.xy,buffer.xy,buffer.count * TRI_XY_VALUE_COUNT * sizeof(int16_t));
+		memcpy(disp.uv,buffer.uv,buffer.count * TRI_UV_VALUE_COUNT * sizeof(uint16_t));
 		memcpy(disp.tbc,buffer.tbc,buffer.count * TRI_TBC_VALUE_COUNT * sizeof(uint8_t));
 		
 		// Applying modifiers if needed
@@ -557,6 +567,14 @@ void vertLayer::selectTri_SelectedVerts(){
 }
 
 // Buffer Operations -------------------------------------------------------------------------------------------------------------------------------------------
+uint16_t norm16_StoU(int16_t val){
+	return (uint16_t)((int32_t)val - (int32_t)INT16_MIN);
+}
+
+int16_t norm16_UtoS(uint16_t val){
+	return (int16_t)((int32_t)val + (int32_t)INT16_MIN);
+}
+
 void vertLayer::nearVert_SetColor(unsigned char color){
 	bool set = false;
 	
@@ -600,8 +618,8 @@ void vertLayer::tris_Add(int16_t x0,int16_t y0,int16_t x1,int16_t y1,int16_t x2,
 	
 	// Other uniform data
 	for(unsigned int i = 0;i < TRI_VERT_COUNT;++i){
-		VERT_U(&buffer,TRI_V(buffer.count,i)) = VERT_X(&buffer,TRI_V(buffer.count,i));
-		VERT_V(&buffer,TRI_V(buffer.count,i)) = VERT_Y(&buffer,TRI_V(buffer.count,i));
+		VERT_U(&buffer,TRI_V(buffer.count,i)) = norm16_StoU(VERT_X(&buffer,TRI_V(buffer.count,i)));
+		VERT_V(&buffer,TRI_V(buffer.count,i)) = norm16_StoU(VERT_Y(&buffer,TRI_V(buffer.count,i)));
 		
 		VERT_TYPE(&buffer,TRI_V(buffer.count,i)) = type;
 		VERT_COLOR(&buffer,TRI_V(buffer.count,i)) = 0;

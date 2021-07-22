@@ -83,7 +83,8 @@
 			unsigned int selVertCount;
 			
 			// Pseudo-Macros ----------------------
-			unsigned int BUFF_XYUV_COUNT();
+			unsigned int BUFF_XY_COUNT();
+			unsigned int BUFF_UV_COUNT();
 			unsigned int BUFF_TBC_COUNT();
 			
 			bool NEARVERT_VALID();

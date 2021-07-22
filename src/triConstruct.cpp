@@ -19,13 +19,15 @@ namespace triCn{
 	struct vecTrisBuf constructBuf;
 	struct vecTris *constructTri;
 	
-	int16_t constructXYUV[TRI_XYUV_VALUE_COUNT];
+	int16_t constructXY[TRI_XY_VALUE_COUNT];
+	uint16_t constructUV[TRI_UV_VALUE_COUNT];
 	uint8_t constructTBC[TRI_TBC_VALUE_COUNT];
 	
 	// Initialization / Destruction
 	void init(){
 		constructBuf.count = 1;
-		constructBuf.xyuv = constructXYUV;
+		constructBuf.xy = constructXY;
+		constructBuf.uv = constructUV;
 		constructBuf.tbc = constructTBC;
 	}
 	

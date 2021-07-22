@@ -258,7 +258,12 @@ int main(){
 		window.clear();
 		
 		// Content render
-		hud::ref::draw();
+		if(state == STATE_V_UVS){
+			render::tex::draw();
+		}else{
+			hud::ref::draw();
+		}
+		
 		hud::drawCenter();
 		
 		grid.draw();

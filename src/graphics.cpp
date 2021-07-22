@@ -25,10 +25,10 @@ extern "C" {
 // Shader customization
 const char SHADER_VERT_CASES[] =
 	"case 1u:\n"
-		"XY = (position + xyuv.xy * paramsV.xy) * ssr.xy * rotater(ssr.z);\n"
+		"XY = (position + xy * paramsV.xy) * ssr.xy * rotater(ssr.z);\n"
 		"break;\n"
 	"case 2u:\n"
-		"XY = (position + xyuv.zw * paramsV.xy) * ssr.xy * rotater(ssr.z);\n"
+		"XY = (position + ((uv * 2.0) - vec2(1.0,1.0)) * paramsV.xy) * ssr.xy * rotater(ssr.z);\n"
 		"break;\n"
 	"case 3u:\n"
 		"XY = (position + XY * paramsV.xy) * ssr.xy * rotater(ssr.z);\n"
@@ -41,7 +41,7 @@ const char SHADER_FRAG_CASES[] =
 		"break;\n"
 	"case 2u:\n"
 		"fragClip();\n"
-		"fragColor = RGBA * texture(sampler0,UV);\n"
+		"fragColor = RGBA * texture(sampler0,vec2(UV.x,1.0 - UV.y));\n"
 		"break;\n"
 ;
 
@@ -216,7 +216,7 @@ class loadableTexture{
 			loaded = false;
 		}
 		
-		bool load(const char *source){
+		bool load(const char *source,bool uniformScale){
 			bool thisLoaded = texture.loadFromFile(std::string(source));
 			loaded = loaded || thisLoaded;
 			
@@ -225,9 +225,13 @@ class loadableTexture{
 				sprite.setOrigin(sf::Vector2f(texture.getSize()) / 2.0f);
 				
 				sf::Vector2u size = texture.getSize();
-				float maxHalfDim = (float)((size.x > size.y ? size.x : size.y) / 2);
 				
-				sprite.setScale(1.0 / maxHalfDim,1.0 / maxHalfDim);
+				if(uniformScale){
+					float maxDim = (float)(size.x > size.y ? size.x : size.y);
+					sprite.setScale(2.0 / maxDim,2.0 / maxDim);
+				}else{
+					sprite.setScale(2.0 / (float)size.x,2.0 / (float)size.y);
+				}
 			}
 			
 			return thisLoaded;
@@ -416,7 +420,7 @@ namespace render{
 		class loadableTexture texTex;
 		
 		bool load(const char *source){
-			return texTex.load(source);
+			return texTex.load(source,false);
 		}
 		
 		void unload(){
@@ -1066,7 +1070,7 @@ namespace hud{
 		class loadableTexture refTex;
 		
 		bool load(const char *source){
-			return refTex.load(source);
+			return refTex.load(source,true);
 		}
 		
 		void unload(){
