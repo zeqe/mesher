@@ -165,10 +165,7 @@ void vertLayer::init(unsigned int maxTriCount,enum viewType initView){
 	
 	// Selections
 	selVerts = new unsigned char[SEL_VERTS_COUNT()];
-	selTris = new unsigned char[SEL_TRIS_COUNT()];
-	
 	memset(selVerts,0,SEL_VERTS_COUNT() * sizeof(unsigned char));
-	memset(selTris,0,SEL_TRIS_COUNT() * sizeof(unsigned char));
 	
 	selVertCount = 0;
 }
@@ -187,7 +184,17 @@ void vertLayer::end(){
 	
 	// Selections
 	delete[] selVerts;
-	delete[] selTris;
+}
+
+bool vertLayer::vertsWelded(unsigned int i,unsigned int j){
+	return VERT_X(&buffer,i) == VERT_X(&buffer,j) && VERT_Y(&buffer,i) == VERT_Y(&buffer,j);
+}
+
+void vertLayer::copyVertSharedAttribs(unsigned int srcI,unsigned int destI){
+	VERT_U(&buffer,destI) = VERT_U(&buffer,srcI);
+	VERT_V(&buffer,destI) = VERT_V(&buffer,srcI);
+	
+	VERT_BONE(&buffer,destI) = VERT_BONE(&buffer,srcI);
 }
 
 void vertLayer::copyTri(struct vecTrisBuf *src,unsigned int srcI,struct vecTrisBuf *dest,unsigned int destI){
@@ -233,11 +240,26 @@ void vertLayer::vertModifiers_Apply(){
 		return;
 	}
 	
+	// Apply modifier
 	for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
 		if(selVerts[i]){
 			(*vertModifier)(&(VERT_X(&buffer,i)),&(VERT_Y(&buffer,i)));
 		}
 	}
+	
+	// Update selections for seamless selection post-weld
+	for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
+		if(selVerts[i]){
+			for(unsigned int j = 0;j < buffer.count * TRI_VERT_COUNT;++j){
+				if(!selVerts[j] && vertsWelded(i,j)){
+					copyVertSharedAttribs(i,j);
+					selVerts[j] = true;
+				}
+			}
+		}
+	}
+	
+	// (n * s) * (n * (1 - s)) = n^2 * (1 - s)s = n^2 * (s - s^2)
 }
 
 // Inherited -------------------------------------------------------------------------------------------------------------------------------------------
@@ -253,6 +275,7 @@ bool vertLayer::nearestPoint_Find(unsigned int radius){
 	
 	// Searching for nearest vertex index
 	uint64_t dist,nearDist = UINT64_MAX;
+	unsigned int tri;
 	
 	for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
 		// Skip selected vertices amid modification
@@ -260,44 +283,28 @@ bool vertLayer::nearestPoint_Find(unsigned int radius){
 			continue;
 		}
 		
-		// Considering only those within the radius
+		// Considering only those within the radius and hovered triangle
 		dist = geom::distSquared_I(VERT_X(&buffer,i),VERT_Y(&buffer,i),iX,iY);
+		tri = i / TRI_VERT_COUNT;
 		
-		if(dist < radius * radius && dist < nearDist){
+		if(
+			dist < radius * radius && dist < nearDist &&
+			geom::pointInTri(
+				iX,iY,
+				VERT_X(&buffer,TRI_V(tri,0)),VERT_Y(&buffer,TRI_V(tri,0)),
+				VERT_X(&buffer,TRI_V(tri,1)),VERT_Y(&buffer,TRI_V(tri,1)),
+				VERT_X(&buffer,TRI_V(tri,2)),VERT_Y(&buffer,TRI_V(tri,2))
+			)
+		){
 			nearVert = i;
+			nearTri = tri;
+			
 			nearDist = dist;
 		}
 	}
 	
-	// Handling unfound near element
-	if(nearVert == NO_NEAR_ELMNT){
-		return false;
-	}
-	
-	// Locate nearest tri
-	unsigned int tri;
-	
-	for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
-		// Must share coordinates with nearest vertex
-		if(VERT_X(&buffer,i) != VERT_X(&buffer,nearVert) || VERT_Y(&buffer,i) != VERT_Y(&buffer,nearVert)){
-			continue;
-		}
-		
-		tri = i / TRI_VERT_COUNT;
-		
-		// Is set if point is found inside tri
-		if(geom::pointInTri(
-			iX,iY,
-			VERT_X(&buffer,TRI_V(tri,0)),VERT_Y(&buffer,TRI_V(tri,0)),
-			VERT_X(&buffer,TRI_V(tri,1)),VERT_Y(&buffer,TRI_V(tri,1)),
-			VERT_X(&buffer,TRI_V(tri,2)),VERT_Y(&buffer,TRI_V(tri,2))
-		)){
-			// Unconditional setting makes for top-most selection
-			nearTri = tri;
-		}
-	}
-	
-	return true;
+	// Returning status
+	return nearVert != NO_NEAR_ELMNT;
 }
 
 bool vertLayer::nearestPoint_Found(){
@@ -387,88 +394,71 @@ void vertLayer::draw(bool wireframe,bool showNearestPoint){
 			}
 		}
 		
-		// Setting appropriate triangle colors if needed
-		if(currentView != VIEW_COLORS){
-			for(unsigned int i = 0;i < buffer.count;++i){
-				if(selTris[i]){
-					VERT_COLOR(&disp,TRI_V(i,0)) = CLR_EDITR_HILIGHT;
-					VERT_COLOR(&disp,TRI_V(i,1)) = CLR_EDITR_HILIGHT;
-					VERT_COLOR(&disp,TRI_V(i,2)) = CLR_EDITR_HILIGHT;
-				}else{
-					VERT_COLOR(&disp,TRI_V(i,0)) = CLR_EDITR_OFFWHITE;
-					VERT_COLOR(&disp,TRI_V(i,1)) = CLR_EDITR_OFFWHITE;
-					VERT_COLOR(&disp,TRI_V(i,2)) = CLR_EDITR_OFFWHITE;
-				}
+		// Set vertex colors if applicable
+		/*if(currentView != VIEW_COLORS){
+			for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
+				VERT_COLOR(&disp,i) = selVerts[i] ? CLR_EDITR_HILIGHT : CLR_EDITR_OFFWHITE;
 			}
-		}
+		}*/
 		
 		// Render
-		render::loadAndDrawTris(&disp,&dispTris,drawMode,currentView == VIEW_COLORS,wireframe);
+		render::loadAndDrawTris(&disp,&dispTris,drawMode,currentView == VIEW_COLORS,wireframe,showNearestPoint ? nearVert : buffer.count * TRI_VERT_COUNT);
 	}else{
 		// Default rendering
-		render::loadAndDrawTris(NULL,&dispTris,drawMode,currentView == VIEW_COLORS,wireframe);
+		render::loadAndDrawTris(NULL,&dispTris,drawMode,currentView == VIEW_COLORS,wireframe,showNearestPoint ? nearVert : buffer.count * TRI_VERT_COUNT);
 	}
 	
 	// State finalization
 	modified = vertModifiers_Applicable();
 	
-	// Draw nearest vertex -------------------------------------------
+	// Draw nearest vertex/currrent triangle indicator -------------------------------------------
 	if(showNearestPoint && nearVert != NO_NEAR_ELMNT){
-		hud::drawCircle(nearestPoint_X(),nearestPoint_Y(),false,POINT_RADIUS_AURA,clr::get(clr::PFL_EDITR,CLR_EDITR_OFFWHITE,clr::ALF_HALF));
+		//hud::drawCircle(nearestPoint_X(),nearestPoint_Y(),false,POINT_RADIUS_AURA,clr::get(clr::PFL_EDITR,CLR_EDITR_OFFWHITE,clr::ALF_HALF));
+		
+		unsigned int base = nearTri * TRI_VERT_COUNT;
+		unsigned int srcMod3 = (nearVert - base);
+		
+		unsigned int a = base + ((srcMod3 + 1) % TRI_VERT_COUNT);
+		unsigned int b = base + ((srcMod3 + 2) % TRI_VERT_COUNT);
+		
+		hud::drawWedge(VERT_X(&disp,nearVert),VERT_Y(&disp,nearVert),VERT_X(&disp,a),VERT_Y(&disp,a),VERT_X(&disp,b),VERT_Y(&disp,b),!selVerts[nearVert] ? 86.0 : 60.0,selVerts[nearVert],clr::get(clr::PFL_EDITR,CLR_EDITR_HICONTRAST,clr::ALF_HALF));
 	}
 	
-	// Draw vertices -------------------------------------------
+	// Draw convex handles -------------------------------------------
 	int16_t preDrawX,preDrawY;
 	int32_t drawX,drawY;
 	
-	for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
-		// Vertex position retrieval and adjustment as needed
-		if(currentView == VIEW_UV){
-			preDrawX = VERT_U(&buffer,i);
-			preDrawY = VERT_V(&buffer,i);
-		}else{
-			preDrawX = VERT_X(&buffer,i);
-			preDrawY = VERT_Y(&buffer,i);
-		}
-		
-		if(selVerts[i] && vertModifiers_Applicable()){
-			(*vertModifier)(&preDrawX,&preDrawY);
-		}
-		
-		if(currentView == VIEW_POSE){
-			sf::Vector2<int32_t> tPos = pose::getPointPosition(VERT_BONE(&buffer,i),preDrawX,preDrawY);
+	if(currentView == VIEW_XY || currentView == VIEW_UV){
+		for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
+			if(VERT_TYPE(&buffer,i) != TRI_TYPE_CONVEX || (i % 3) != 0){
+				continue;
+			}
 			
-			drawX = tPos.x;
-			drawY = tPos.y;
-		}else{
-			drawX = preDrawX;
-			drawY = preDrawY;
-		}
-		
-		// Drawing
-		switch(currentView){
-			case VIEW_XY:
-			case VIEW_UV:
-				if(selVerts[i]){
-					hud::drawCircle(drawX,drawY,false,POINT_RADIUS,clr::get(clr::PFL_EDITR,CLR_EDITR_HILIGHT,clr::ALF_HALF));
-					
-				}else if(VERT_TYPE(&buffer,i) == TRI_TYPE_CONVEX && (i % 3) == 0){
-					hud::drawCircle(drawX,drawY,false,POINT_RADIUS,clr::get(clr::PFL_EDITR,CLR_EDITR_OFFWHITE,clr::ALF_HALF));
-					
-				}else{
-					continue;
-				}
+			// Vertex position retrieval and adjustment as needed
+			if(currentView == VIEW_UV){
+				preDrawX = VERT_U(&buffer,i);
+				preDrawY = VERT_V(&buffer,i);
+			}else{
+				preDrawX = VERT_X(&buffer,i);
+				preDrawY = VERT_Y(&buffer,i);
+			}
+			
+			if(selVerts[i] && vertModifiers_Applicable()){
+				(*vertModifier)(&preDrawX,&preDrawY);
+			}
+			
+			if(currentView == VIEW_POSE){
+				sf::Vector2<int32_t> tPos = pose::getPointPosition(VERT_BONE(&buffer,i),preDrawX,preDrawY);
 				
-				break;
-			case VIEW_COLORS:
-				hud::drawMark(VERT_COLOR(&buffer,i),drawX,drawY,false,POINT_RADIUS);
-				
-				break;
-			case VIEW_BONES:
-			case VIEW_POSE:
-				hud::drawMark(VERT_BONE(&buffer,i),drawX,drawY,false,POINT_RADIUS);
-				
-				break;
+				drawX = tPos.x;
+				drawY = tPos.y;
+			}else{
+				drawX = preDrawX;
+				drawY = preDrawY;
+			}
+			
+			// Drawing
+			hud::drawCircle(drawX,drawY,false,POINT_RADIUS,clr::get(clr::PFL_EDITR,selVerts[i] ? CLR_EDITR_HILIGHT : CLR_EDITR_OFFWHITE,clr::ALF_HALF));
 		}
 	}
 }
@@ -479,40 +469,31 @@ void vertLayer::selectVert_Nearest(){
 		return;
 	}
 	
-	// Toggle all with same coordinates as nearVert
+	bool newState = !selVerts[nearVert];
+	int inc = (newState) - (!newState);
+	
 	for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
-		if(VERT_X(&buffer,i) == VERT_X(&buffer,nearVert) && VERT_Y(&buffer,i) == VERT_Y(&buffer,nearVert)){
-			selVerts[i] = !selVerts[i];
-			
-			if(selVerts[i]){
-				++selVertCount;
-			}else{
-				--selVertCount;
-			}
+		if(vertsWelded(i,nearVert) && selVerts[i] != newState){
+			selVerts[i] = newState;
+			selVertCount += inc;
 		}
 	}
+	
+	modified = true;
 }
 
 void vertLayer::selectVert_All(){
 	memset(selVerts,1,buffer.count * TRI_VERT_COUNT * sizeof(unsigned char));
 	selVertCount = buffer.count * TRI_VERT_COUNT;
+	
+	modified = true;
 }
 
 void vertLayer::selectVert_Clear(){
 	memset(selVerts,0,SEL_VERTS_COUNT() * sizeof(unsigned char));
 	selVertCount = 0;
-}
-
-void vertLayer::selectVert_SelectedTris(){
-	selVertCount = 0;
 	
-	for(unsigned int i = 0;i < buffer.count;++i){
-		selVerts[3 * i + 0] = selTris[i];
-		selVerts[3 * i + 1] = selTris[i];
-		selVerts[3 * i + 2] = selTris[i];
-		
-		selVertCount += 3 * (selTris[i] > 0);
-	}
+	modified = true;
 }
 
 void vertLayer::selectVert_ByBone(unsigned char bone){
@@ -525,6 +506,8 @@ void vertLayer::selectVert_ByBone(unsigned char bone){
 			++selVertCount;
 		}
 	}
+	
+	modified = true;
 }
 
 void vertLayer::selectVert_ByColor(unsigned char color){
@@ -536,31 +519,6 @@ void vertLayer::selectVert_ByColor(unsigned char color){
 		if(selVerts[i]){
 			++selVertCount;
 		}
-	}
-}
-
-void vertLayer::selectTri_Nearest(){
-	if(!NEARTRI_VALID()){
-		return;
-	}
-	
-	selTris[nearTri] = !selTris[nearTri];
-	modified = true;
-}
-
-void vertLayer::selectTri_All(){
-	memset(selTris,1,buffer.count * sizeof(unsigned char));
-	modified = true;
-}
-
-void vertLayer::selectTri_Clear(){
-	memset(selTris,0,SEL_TRIS_COUNT() * sizeof(unsigned char));
-	modified = true;
-}
-
-void vertLayer::selectTri_SelectedVerts(){
-	for(unsigned int i = 0;i < buffer.count;++i){
-		selTris[i] = selVerts[TRI_V(i,0)] && selVerts[TRI_V(i,1)] && selVerts[TRI_V(i,2)];
 	}
 	
 	modified = true;
@@ -579,7 +537,7 @@ void vertLayer::nearVert_SetColor(unsigned char color){
 	bool set = false;
 	
 	for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
-		if(i / TRI_VERT_COUNT == nearTri && VERT_X(&buffer,i) == VERT_X(&buffer,nearVert) && VERT_Y(&buffer,i) == VERT_Y(&buffer,nearVert)){
+		if(i / TRI_VERT_COUNT == nearTri && vertsWelded(i,nearVert)){
 			VERT_COLOR(&buffer,i) = color;
 			set = true;
 		}
@@ -592,7 +550,7 @@ void vertLayer::nearVert_SetBone(unsigned char bone){
 	bool set = false;
 	
 	for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
-		if(i / TRI_VERT_COUNT == nearTri && VERT_X(&buffer,i) == VERT_X(&buffer,nearVert) && VERT_Y(&buffer,i) == VERT_Y(&buffer,nearVert)){
+		if(vertsWelded(i,nearVert)){
 			VERT_BONE(&buffer,i) = bone;
 			set = true;
 		}
@@ -617,13 +575,34 @@ void vertLayer::tris_Add(int16_t x0,int16_t y0,int16_t x1,int16_t y1,int16_t x2,
 	VERT_Y(&buffer,TRI_V(buffer.count,2)) = y2;
 	
 	// Other uniform data
+	unsigned int shared,k;
+	
 	for(unsigned int i = 0;i < TRI_VERT_COUNT;++i){
-		VERT_U(&buffer,TRI_V(buffer.count,i)) = norm16_StoU(VERT_X(&buffer,TRI_V(buffer.count,i)));
-		VERT_V(&buffer,TRI_V(buffer.count,i)) = norm16_StoU(VERT_Y(&buffer,TRI_V(buffer.count,i)));
+		k = TRI_V(buffer.count,i);
 		
-		VERT_TYPE(&buffer,TRI_V(buffer.count,i)) = type;
-		VERT_COLOR(&buffer,TRI_V(buffer.count,i)) = 0;
-		VERT_BONE(&buffer,TRI_V(buffer.count,i)) = 0;
+		// Check for welded vertices upon creation
+		shared = buffer.count * TRI_VERT_COUNT;
+		
+		for(unsigned int j = 0;j < buffer.count * TRI_VERT_COUNT;++j){
+			if(vertsWelded(k,j)){
+				shared = j;
+			}
+		}
+		
+		// Assign attribute values accordingly
+		VERT_TYPE(&buffer,k) = type;
+		VERT_COLOR(&buffer,k) = 0;
+		
+		if(shared < buffer.count * TRI_VERT_COUNT){
+			// Welded case
+			copyVertSharedAttribs(shared,k);
+		}else{
+			// Unwelded case
+			VERT_U(&buffer,k) = norm16_StoU(VERT_X(&buffer,k));
+			VERT_V(&buffer,k) = norm16_StoU(VERT_Y(&buffer,k));
+			
+			VERT_BONE(&buffer,k) = 0;
+		}
 	}
 	
 	// Selection clearance
@@ -631,14 +610,12 @@ void vertLayer::tris_Add(int16_t x0,int16_t y0,int16_t x1,int16_t y1,int16_t x2,
 	selVerts[TRI_V(buffer.count,1)] = 0;
 	selVerts[TRI_V(buffer.count,2)] = 0;
 	
-	selTris[buffer.count] = 0;
-	
 	// Update state
 	++buffer.count;
 	modified = true;
 }
 
-void vertLayer::tris_DeleteSelected(){
+/*void vertLayer::tris_DeleteSelected(){
 	if(!NEARVERT_VALID()){
 		return;
 	}
@@ -677,7 +654,7 @@ void vertLayer::tris_DeleteSelected(){
 	
 	// Copying over triangles by index will have invalidated old indices
 	nearestPoint_Clear();
-}
+}*/
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 // Grid Layer ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

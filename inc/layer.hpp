@@ -79,7 +79,7 @@
 			unsigned int nearVert,nearTri;
 			
 			// Selection
-			unsigned char *selVerts,*selTris;
+			unsigned char *selVerts;
 			unsigned int selVertCount;
 			
 			// Pseudo-Macros ----------------------
@@ -97,6 +97,9 @@
 			void init(unsigned int maxTriCount,enum viewType initView);
 			void end();
 			
+			bool vertsWelded(unsigned int i,unsigned int j);
+			
+			void copyVertSharedAttribs(unsigned int srcI,unsigned int destI);
 			void copyTri(struct vecTrisBuf *src,unsigned int srcI,struct vecTrisBuf *dest,unsigned int destI);
 			
 		public:
@@ -131,22 +134,16 @@
 			void selectVert_Nearest();
 			void selectVert_All();
 			void selectVert_Clear();
-			void selectVert_SelectedTris();
 			
 			void selectVert_ByBone(unsigned char bone);
 			void selectVert_ByColor(unsigned char color);
-			
-			void selectTri_Nearest();
-			void selectTri_All();
-			void selectTri_Clear();
-			void selectTri_SelectedVerts();
 			
 			// Buffer Operations ---------------------
 			void nearVert_SetColor(unsigned char color);
 			void nearVert_SetBone(unsigned char bone);
 			
 			void tris_Add(int16_t x0,int16_t y0,int16_t x1,int16_t y1,int16_t x2,int16_t y2,unsigned char type);
-			void tris_DeleteSelected();
+			// void tris_DeleteSelected();
 	};
 	
 	class gridLayer: public layer{

@@ -25,13 +25,31 @@ extern "C" {
 // Shader customization
 const char SHADER_VERT_CASES[] =
 	"case 1u:\n"
-		"XY = (position + xy * paramsV.xy) * ssr.xy * rotater(ssr.z);\n"
+		"XY = (position + xy * fParamsV.xy) * ssr.xy * rotater(ssr.z);\n"
+		"UV = uv;\n"
+		
+		"RGBA = indexColor(tbc.z);\n"
+		// "RGBA = gl_VertexID == iParamsV.x ? vec4(RGBA.rgb,1.0) : RGBA;\n"
+		
+		// "RGBA = indexColor(tbc.z);\n"
+		// "RGBA = iParamsV.x > 0 && gl_VertexID == iParamsV.y ? vec4(1.0 - RGBA.r,1.0 - RGBA.g,1.0 - RGBA.b,RGBA.a) : RGBA;\n"
+		
 		"break;\n"
 	"case 2u:\n"
-		"XY = (position + ((uv * 2.0) - vec2(1.0,1.0)) * paramsV.xy) * ssr.xy * rotater(ssr.z);\n"
+		"XY = (position + ((uv * 2.0) - vec2(1.0,1.0)) * fParamsV.xy) * ssr.xy * rotater(ssr.z);\n"
+		"UV = uv;\n"
+		
+		"RGBA = indexColor(tbc.z);\n"
+		// "RGBA = gl_VertexID == iParamsV.x ? vec4(RGBA.rgb,1.0) : RGBA;\n"
+		
 		"break;\n"
 	"case 3u:\n"
-		"XY = (position + XY * paramsV.xy) * ssr.xy * rotater(ssr.z);\n"
+		"XY = (position + indexPosition(tbc.y) * fParamsV.xy) * ssr.xy * rotater(ssr.z);\n"
+		"UV = uv;\n"
+		
+		"RGBA = indexColor(tbc.z);\n"
+		// "RGBA = gl_VertexID == iParamsV.x ? vec4(RGBA.rgb,1.0) : RGBA;\n"
+		
 		"break;\n"
 ;
 
@@ -77,6 +95,8 @@ sf::ConvexShape triangle,rhombus,square;
 sf::Shape *marks[MARK_COUNT];
 
 sf::ConvexShape stem;
+
+sf::ConvexShape wedgeCone,wedgeCap;
 
 #define CENTER_DIM 15.0
 #define LINE_WIDTH 2.0
@@ -388,6 +408,27 @@ namespace graphics{
 		stem.setPoint(2,sf::Vector2f(1.0,0.0));
 		stem.setPoint(3,sf::Vector2f(0.1,-1.25 * POINT_RADIUS));
 		
+		// Wedge parts
+		wedgeCone.setPointCount(3);
+		wedgeCone.setPoint(0,sf::Vector2f(0.0,0.0));
+		wedgeCone.setPoint(1,sf::Vector2f(0.7,0.7));
+		wedgeCone.setPoint(2,sf::Vector2f(0.7,-0.7));
+		
+		wedgeCap.setPointCount(4);
+		wedgeCap.setPoint(0,sf::Vector2f(0.7,-0.7));
+		wedgeCap.setPoint(1,sf::Vector2f(1.0,-1.0));
+		wedgeCap.setPoint(2,sf::Vector2f(1.0,1.0));
+		wedgeCap.setPoint(3,sf::Vector2f(0.7,0.7));
+		
+		/*wedgeCap.setPointCount(65);
+		wedgeCap.setPoint(0,sf::Vector2f(0.0,0.0));
+		
+		for(unsigned int i = 0;i < 64;++i){
+			float angle = (-PI / 2.0) + i * (PI / 63);
+			
+			wedgeCap.setPoint(1 + i,sf::Vector2f(cos(angle),sin(angle)));
+		}*/
+		
 		// Help string dimensions
 		for(unsigned int i = 0;i < 4;++i){
 			helpGeneralDimensions[i] = calculateStringDimensions(mesherHelpGenerals[i]);
@@ -444,7 +485,7 @@ namespace render{
 		wireframePfl = wAr;
 	}
 	
-	void loadAndDrawTris(struct vecTrisBuf *buf,struct vecTris **tris,enum mode draw,bool customClr,bool wireframe){
+	void loadAndDrawTris(struct vecTrisBuf *buf,struct vecTris **tris,enum mode draw,bool customClr,bool wireframe,int iParam){
 		target->setActive(true);
 		resetBindings();
 		
@@ -457,7 +498,9 @@ namespace render{
 		// Drawing
 		if(*tris != NULL){
 			useShader();
+			
 			vw::norm::vecGL::apply(*target,0.0,0.0,1.0,1.0);
+			uniformIParamsV(iParam,0,0,0);
 			
 			unsigned int vertMode;
 			
@@ -1010,12 +1053,67 @@ namespace hud{
 		);
 	}
 	
+	void drawWedge(int32_t srcX,int32_t srcY,int32_t aX,int32_t aY,int32_t bX,int32_t bY,float radius,bool outline,uint32_t color){
+		// Geometric math calculation
+		double angleA = atan2(aY - srcY,aX - srcX);
+		double angleB = atan2(bY - srcY,bX - srcX);
+		double dist1 = fabs(angleA - angleB);
+		double dist2 = fabs((angleA > 0.0 ? angleA : (2.0 * PI + angleA)) - (angleB > 0.0 ? angleB : (2.0 * PI + angleB)));
+		
+		double theta,delta;
+		
+		if(dist1 <= dist2){
+			theta = dist1 / 2.0;
+			delta = -((angleA < angleB ? angleA : angleB) + theta);
+		}else{
+			theta = dist2 / 2.0;
+			delta = -((angleA > angleB ? angleA : angleB) + theta);
+		}
+		
+		// Parameter calculation
+		double distA = sqrt(geom::distSquared_D(vw::norm::toD_u(srcX),vw::norm::toD_u(srcY),vw::norm::toD_u(aX),vw::norm::toD_u(aY))) * vw::norm::getZoomScale();
+		double distB = sqrt(geom::distSquared_D(vw::norm::toD_u(srcX),vw::norm::toD_u(srcY),vw::norm::toD_u(bX),vw::norm::toD_u(bY))) * vw::norm::getZoomScale();
+		
+		double rad = distA < radius ? distA : radius;
+		rad = distB < rad ? distB : rad;
+		
+		double a = rad * fabs(cos(theta));
+		// double b = rad * fabs((1 - cos(theta)));
+		double c = rad * fabs(sin(theta));
+		
+		// Drawing cone
+		if(!outline){
+			wedgeCone.setScale(a,c);
+			wedgeCone.setRotation(delta * 180.0 / PI);
+			wedgeCone.setFillColor(sf::Color(color));
+			
+			target->draw(
+				wedgeCone,
+				sf::RenderStates(sf::Transform().translate(vw::norm::transform().transformPoint(vw::norm::toD_u(srcX),vw::norm::toD_u(srcY))))
+			);
+		}
+		
+		// Drawing cap
+		if(outline){
+			wedgeCap.setScale(a,c);
+			wedgeCap.setRotation(delta * 180.0 / PI);
+			wedgeCap.setFillColor(sf::Color(color));
+			
+			target->draw(
+				wedgeCap,
+				sf::RenderStates(sf::Transform().translate(
+					vw::norm::transform().transformPoint(vw::norm::toD_u(srcX),vw::norm::toD_u(srcY))
+				))
+			);
+		}
+	}
+	
 	void drawMark(unsigned int i,int32_t x,int32_t y,bool isScaleNorm,float scale){
 		float newScale = isScaleNorm ? vw::norm::getScale() * scale : scale;
 		sf::Shape *drawn = marks[markShape(i)];
 		
 		drawn->setScale(newScale,newScale);
-		drawn->setFillColor(sf::Color(markColor(i,clr::ALF_HALF)));
+		drawn->setFillColor(sf::Color(markColor(i,clr::ALF_ONE)));
 		
 		target->draw(
 			*drawn,

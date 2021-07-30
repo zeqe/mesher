@@ -492,24 +492,6 @@ int main(){
 							}
 							
 							break;
-						case STATED_KI(STATE_TRIS,0,1,0,KEY_D):
-							if(currLayerValid()){
-								layers[currLayer]->tris_DeleteSelected();
-							}
-							
-							break;
-						case STATED_KI(STATE_TRIS,0,0,1,KEY_A):
-							if(currLayerValid()){
-								layers[currLayer]->selectTri_All();
-							}
-							
-							break;
-						case STATED_KI(STATE_TRIS,0,0,1,KEY_C):
-							if(currLayerValid()){
-								layers[currLayer]->selectTri_Clear();
-							}
-							
-							break;
 						case STATED_KI(STATE_V_COLORS,0,1,0,KEY_S):
 							strIn::activate(8);
 							state = STATE_ATOP_COLOR_SET;
@@ -778,12 +760,6 @@ int main(){
 												state = STATE_ATOP_TRANSFORM;
 											}
 										}
-									}
-									
-									break;
-								case STATE_TRIS:
-									if(currLayerValid()){
-										layers[currLayer]->selectTri_Nearest();
 									}
 									
 									break;

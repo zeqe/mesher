@@ -216,7 +216,7 @@ namespace vw{
 				panPos = panPos / (normScale * zoomScale);
 				
 				uniformPosition(offsetX + panPos.x,offsetY - panPos.y);
-				uniformParamsV(relScaleX,relScaleY,0.0,0.0);
+				uniformFParamsV(relScaleX,relScaleY,0.0,0.0);
 				
 				uniformSSR(
 					zoomScale * normScale * 2.0 / (float)target.getSize().x,

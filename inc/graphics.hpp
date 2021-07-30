@@ -15,6 +15,8 @@
 	#define POINT_RADIUS 7.5
 	#define POINT_RADIUS_AURA 20.0
 	
+	#define TRI_VERT_MARKER_RADIUS 60.0
+	
 	namespace graphics{
 		bool load(sf::RenderTarget &newTarget,const char *hudFontPath);
 		void free();
@@ -40,7 +42,7 @@
 		};
 		
 		void setColors(enum clr::profile mAr,enum clr::profile wAr);
-		void loadAndDrawTris(struct vecTrisBuf *buf,struct vecTris **tris,enum mode draw,bool customClr,bool wireframe);
+		void loadAndDrawTris(struct vecTrisBuf *buf,struct vecTris **tris,enum mode draw,bool customClr,bool wireframe,int iParam);
 	}
 	
 	namespace hud{
@@ -69,6 +71,7 @@
 		void drawCircle(int32_t x,int32_t y,bool isRadNorm,float radius,uint32_t color);
 		void drawCircleOutline(int32_t x,int32_t y,bool isRadNorm,float radius,uint32_t color);
 		
+		void drawWedge(int32_t srcX,int32_t srcY,int32_t aX,int32_t aY,int32_t bX,int32_t bY,float radius,bool outline,uint32_t color);
 		void drawMark(unsigned int i,int32_t x,int32_t y,bool isScaleNorm,float scale);
 		void drawStem(unsigned int i,int32_t srcX,int32_t srcY,int32_t destX,int32_t destY);
 		
