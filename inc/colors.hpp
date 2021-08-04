@@ -38,6 +38,8 @@
 		uint32_t get(enum profile colorProfile,unsigned char colorProfileMember,enum alpha colorAlpha);
 		uint8_t getAlpha(enum alpha colorAlpha);
 		
+		uint32_t inverse(uint32_t color);
+		
 		void apply(enum profile colorProfile,unsigned char colorProfileMember,enum alpha colorAlpha,enum profile arrayProfile);
 	}
 	

@@ -80,6 +80,15 @@ namespace clr{
 		return COLOR_ALPHAS[colorAlpha];
 	}
 	
+	uint32_t inverse(uint32_t color){
+		uint8_t r = (color >> 24) & 0xff;
+		uint8_t g = (color >> 16) & 0xff;
+		uint8_t b = (color >> 8) & 0xff;
+		uint8_t a = color & 0xff;
+		
+		return ((0xff - r) << 24) | ((0xff - g) << 16) | ((0xff - b) << 8) | a;
+	}
+	
 	void apply(enum profile colorProfile,unsigned char colorProfileMember,enum alpha colorAlpha,enum profile arrayProfile){
 		uniformColor_u32(get(colorProfile,colorProfileMember,colorAlpha));
 		uniformColorArray_u32((uint32_t *)COLOR_PFLS[arrayProfile],COLOR_PFLS_COUNTS[arrayProfile]);

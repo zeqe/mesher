@@ -78,7 +78,7 @@
 		void drawCircle(int32_t x,int32_t y,bool isRadNorm,float radius,uint32_t color);
 		void drawCircleOutline(int32_t x,int32_t y,bool isRadNorm,float radius,uint32_t color);
 		
-		void drawWedge(int32_t srcX,int32_t srcY,int32_t aX,int32_t aY,int32_t bX,int32_t bY,float radius,bool outline,uint32_t color);
+		void drawWedge(int32_t srcX,int32_t srcY,int32_t aX,int32_t aY,int32_t bX,int32_t bY,float radius,uint32_t color);
 		void drawMark(unsigned int i,int32_t x,int32_t y,bool isScaleNorm,float scale);
 		void drawStem(unsigned int i,int32_t srcX,int32_t srcY,int32_t destX,int32_t destY);
 		

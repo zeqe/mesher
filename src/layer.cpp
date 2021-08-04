@@ -9,6 +9,7 @@
 #include "layer.hpp"
 #include "geometry.hpp"
 #include "colors.hpp"
+#include "colorsCustom.hpp"
 #include "graphics.hpp"
 #include "skeleton.hpp"
 
@@ -420,15 +421,40 @@ void vertLayer::draw(unsigned char currBone,bool wireframe,bool showNearestPoint
 	
 	// Draw nearest vertex/currrent triangle indicator -------------------------------------------
 	if(showNearestPoint && nearVert != NO_NEAR_ELMNT){
-		//hud::drawCircle(nearestPoint_X(),nearestPoint_Y(),false,POINT_RADIUS_AURA,clr::get(clr::PFL_EDITR,CLR_EDITR_OFFWHITE,clr::ALF_HALF));
+		// Indices calculation
+		unsigned int base,srcMod3,a,b;
 		
-		unsigned int base = nearTri * TRI_VERT_COUNT;
-		unsigned int srcMod3 = (nearVert - base);
+		base = nearTri * TRI_VERT_COUNT;
+		srcMod3 = (nearVert - base);
+		a = base + ((srcMod3 + 1) % TRI_VERT_COUNT);
+		b = base + ((srcMod3 + 2) % TRI_VERT_COUNT);
 		
-		unsigned int a = base + ((srcMod3 + 1) % TRI_VERT_COUNT);
-		unsigned int b = base + ((srcMod3 + 2) % TRI_VERT_COUNT);
+		// Color calculation
+		uint32_t indicatorColor;
 		
-		hud::drawWedge(VERT_X(&disp,nearVert),VERT_Y(&disp,nearVert),VERT_X(&disp,a),VERT_Y(&disp,a),VERT_X(&disp,b),VERT_Y(&disp,b),!selVerts[nearVert] ? 86.0 : 60.0,selVerts[nearVert],clr::get(clr::PFL_EDITR,CLR_EDITR_HICONTRAST,clr::ALF_HALF));
+		switch(renderClrPfl()){
+			case CLR_PFL_CSTM:
+				indicatorColor = (clr::inverse(clrCstm::get(VERT_COLOR(&disp,nearVert))) & 0xffffff00) | clr::getAlpha(clr::ALF_HALF);
+				
+				break;
+			case CLR_PFL_RANBW:
+				indicatorColor = clr::inverse(clr::get(clr::PFL_RANBW,VERT_COLOR(&disp,nearVert),clr::ALF_HALF));
+				
+				break;
+			case CLR_PFL_EDITOR:
+			default:
+				indicatorColor = clr::get(clr::PFL_EDITR,CLR_EDITR_HICONTRAST,clr::ALF_HALF);
+				
+				break;
+		}
+		
+		// Draw
+		hud::drawWedge(
+			VERT_X(&disp,nearVert),VERT_Y(&disp,nearVert),
+			VERT_X(&disp,a),VERT_Y(&disp,a),
+			VERT_X(&disp,b),VERT_Y(&disp,b),
+			TRI_VERT_MARKER_RADIUS,indicatorColor
+		);
 	}
 	
 	// Draw convex handles -------------------------------------------

@@ -95,8 +95,7 @@ sf::ConvexShape triangle,rhombus,square;
 sf::Shape *marks[MARK_COUNT];
 
 sf::ConvexShape stem;
-
-sf::ConvexShape wedgeCone,wedgeCap;
+sf::ConvexShape wedge;
 
 #define CENTER_DIM 15.0
 #define LINE_WIDTH 2.0
@@ -408,26 +407,11 @@ namespace graphics{
 		stem.setPoint(2,sf::Vector2f(1.0,0.0));
 		stem.setPoint(3,sf::Vector2f(0.1,-1.25 * POINT_RADIUS));
 		
-		// Wedge parts
-		wedgeCone.setPointCount(3);
-		wedgeCone.setPoint(0,sf::Vector2f(0.0,0.0));
-		wedgeCone.setPoint(1,sf::Vector2f(0.7,0.7));
-		wedgeCone.setPoint(2,sf::Vector2f(0.7,-0.7));
-		
-		wedgeCap.setPointCount(4);
-		wedgeCap.setPoint(0,sf::Vector2f(0.7,-0.7));
-		wedgeCap.setPoint(1,sf::Vector2f(1.0,-1.0));
-		wedgeCap.setPoint(2,sf::Vector2f(1.0,1.0));
-		wedgeCap.setPoint(3,sf::Vector2f(0.7,0.7));
-		
-		/*wedgeCap.setPointCount(65);
-		wedgeCap.setPoint(0,sf::Vector2f(0.0,0.0));
-		
-		for(unsigned int i = 0;i < 64;++i){
-			float angle = (-PI / 2.0) + i * (PI / 63);
-			
-			wedgeCap.setPoint(1 + i,sf::Vector2f(cos(angle),sin(angle)));
-		}*/
+		// Wedge
+		wedge.setPointCount(3);
+		wedge.setPoint(0,sf::Vector2f(0.0,0.0));
+		wedge.setPoint(1,sf::Vector2f(1.0,1.0));
+		wedge.setPoint(2,sf::Vector2f(1.0,-1.0));
 		
 		// Help string dimensions
 		for(unsigned int i = 0;i < 4;++i){
@@ -1046,7 +1030,7 @@ namespace hud{
 		);
 	}
 	
-	void drawWedge(int32_t srcX,int32_t srcY,int32_t aX,int32_t aY,int32_t bX,int32_t bY,float radius,bool outline,uint32_t color){
+	void drawWedge(int32_t srcX,int32_t srcY,int32_t aX,int32_t aY,int32_t bX,int32_t bY,float radius,uint32_t color){
 		// Geometric math calculation
 		double angleA = atan2(aY - srcY,aX - srcX);
 		double angleB = atan2(bY - srcY,bX - srcX);
@@ -1063,7 +1047,7 @@ namespace hud{
 			delta = -((angleA > angleB ? angleA : angleB) + theta);
 		}
 		
-		// Parameter calculation
+		// Radius calculation
 		double distA = sqrt(geom::distSquared_D(vw::norm::toD_u(srcX),vw::norm::toD_u(srcY),vw::norm::toD_u(aX),vw::norm::toD_u(aY))) * vw::norm::getZoomScale();
 		double distB = sqrt(geom::distSquared_D(vw::norm::toD_u(srcX),vw::norm::toD_u(srcY),vw::norm::toD_u(bX),vw::norm::toD_u(bY))) * vw::norm::getZoomScale();
 		
@@ -1071,34 +1055,17 @@ namespace hud{
 		rad = distB < rad ? distB : rad;
 		
 		double a = rad * fabs(cos(theta));
-		// double b = rad * fabs((1 - cos(theta)));
-		double c = rad * fabs(sin(theta));
+		double b = rad * fabs(sin(theta));
 		
-		// Drawing cone
-		if(!outline){
-			wedgeCone.setScale(a,c);
-			wedgeCone.setRotation(delta * 180.0 / PI);
-			wedgeCone.setFillColor(sf::Color(color));
-			
-			target->draw(
-				wedgeCone,
-				sf::RenderStates(sf::Transform().translate(vw::norm::transform().transformPoint(vw::norm::toD_u(srcX),vw::norm::toD_u(srcY))))
-			);
-		}
+		// Drawing triangle
+		wedge.setScale(a,b);
+		wedge.setRotation(delta * 180.0 / PI);
+		wedge.setFillColor(sf::Color(color));
 		
-		// Drawing cap
-		if(outline){
-			wedgeCap.setScale(a,c);
-			wedgeCap.setRotation(delta * 180.0 / PI);
-			wedgeCap.setFillColor(sf::Color(color));
-			
-			target->draw(
-				wedgeCap,
-				sf::RenderStates(sf::Transform().translate(
-					vw::norm::transform().transformPoint(vw::norm::toD_u(srcX),vw::norm::toD_u(srcY))
-				))
-			);
-		}
+		target->draw(
+			wedge,
+			sf::RenderStates(sf::Transform().translate(vw::norm::transform().transformPoint(vw::norm::toD_u(srcX),vw::norm::toD_u(srcY))))
+		);
 	}
 	
 	void drawMark(unsigned int i,int32_t x,int32_t y,bool isScaleNorm,float scale){
