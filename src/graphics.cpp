@@ -24,42 +24,42 @@ extern "C" {
 
 // Shader customization
 const char SHADER_VERT_CASES[] =
-	"case 1u:\n"
+	// 0: Pose XY, fParam-less
+	// Raw XY
+	"case " STRINGIFY(VERT_MODE_RAW_XY) "u:\n"
 		"XY = (position + xy * fParamsV.xy) * ssr.xy * rotater(ssr.z);\n"
 		"UV = uv;\n"
-		
 		"RGBA = indexColor(tbc.z);\n"
-		// "RGBA = gl_VertexID == iParamsV.x ? vec4(RGBA.rgb,1.0) : RGBA;\n"
-		
-		// "RGBA = indexColor(tbc.z);\n"
-		// "RGBA = iParamsV.x > 0 && gl_VertexID == iParamsV.y ? vec4(1.0 - RGBA.r,1.0 - RGBA.g,1.0 - RGBA.b,RGBA.a) : RGBA;\n"
 		
 		"break;\n"
-	"case 2u:\n"
+	// Raw UV
+	"case " STRINGIFY(VERT_MODE_RAW_UV) "u:\n"
 		"XY = (position + ((uv * 2.0) - vec2(1.0,1.0)) * fParamsV.xy) * ssr.xy * rotater(ssr.z);\n"
 		"UV = uv;\n"
-		
 		"RGBA = indexColor(tbc.z);\n"
-		// "RGBA = gl_VertexID == iParamsV.x ? vec4(RGBA.rgb,1.0) : RGBA;\n"
 		
 		"break;\n"
-	"case 3u:\n"
+	// Pose XY
+	"case " STRINGIFY(VERT_MODE_POSE_XY) "u:\n"
 		"XY = (position + indexPosition(tbc.y) * fParamsV.xy) * ssr.xy * rotater(ssr.z);\n"
 		"UV = uv;\n"
-		
 		"RGBA = indexColor(tbc.z);\n"
-		// "RGBA = gl_VertexID == iParamsV.x ? vec4(RGBA.rgb,1.0) : RGBA;\n"
 		
 		"break;\n"
 ;
 
 const char SHADER_FRAG_CASES[] =
-	"case 1u:\n"
+	// 0: Clipped Color
+	// Full Color
+	"case " STRINGIFY(FRAG_MODE_FULL_CLR) "u:\n"
 		"fragColor = RGBA;\n"
+		
 		"break;\n"
-	"case 2u:\n"
+	// Clipped Color & Sample
+	"case " STRINGIFY(FRAG_MODE_CLIPPED_CLR_SMPL) "u:\n"
 		"fragClip();\n"
 		"fragColor = RGBA * texture(sampler0,vec2(UV.x,1.0 - UV.y));\n"
+		
 		"break;\n"
 ;
 
@@ -106,11 +106,10 @@ sf::ConvexShape wedgeCone,wedgeCap;
 #define STATE_SYMBOL_UNIT_WIDTH (STATE_SYMBOL_WIDTH + 1)
 
 const std::string mesherStateSymbols[STATE_COUNT] = {
-	"xy ", // STATE_VERTS
-	"tr ", // STATE_TRIS
-	"uv ", // STATE_V_UVS
-	"vc ", // STATE_V_COLORS
-	"vb ", // STATE_V_BONES
+	"xy ", // STATE_VERT_XY
+	"uv ", // STATE_VERT_UV
+	"vc ", // STATE_VERT_COLOR
+	"vb ", // STATE_VERT_BONE
 	"la ", // STATE_LAYERS
 	"bo ", // STATE_BONES
 	"po ", // STATE_POSE
@@ -120,11 +119,10 @@ const std::string mesherStateSymbols[STATE_COUNT] = {
 #define STATE_TITLE_MAX_LEN 18
 
 const std::string mesherStateTitles[TOTAL_STATE_COUNT] = {
-	"Vertex XY", // STATE_VERTS
-	"Triangles", // STATE_TRIS
-	"Vertex UV", // STATE_V_UVS
-	"Vertex Colour", // STATE_V_COLORS
-	"Vertex Bone", // STATE_V_BONES
+	"Vertex XY", // STATE_VERT_XY
+	"Vertex UV", // STATE_VERT_UV
+	"Vertex Colour", // STATE_VERT_COLOR
+	"Vertex Bone", // STATE_VERT_BONE
 	"Layers", // STATE_LAYERS
 	"Bones", // STATE_BONES
 	"Pose", // STATE_POSE
@@ -189,21 +187,18 @@ std::string mesherHelpGenerals[4] = {
 };
 
 const std::string mesherHelpStates[STATE_COUNT] = {
-	// STATE_VERTS
+	// STATE_VERT_XY
 	"shift+LM: select/unselect nearest\n"
 	"shift+a:  select all\n"
 	"shift+c:  unselect all\n"
 	,
-	// STATE_TRIS
+	// STATE_VERT_UV
 	"\n"
 	,
-	// STATE_V_UVS
+	// STATE_VERT_COLOR
 	"\n"
 	,
-	// STATE_V_COLORS
-	"\n"
-	,
-	// STATE_V_BONES
+	// STATE_VERT_BONE
 	"\n"
 	,
 	// STATE_LAYERS
@@ -241,6 +236,7 @@ class loadableTexture{
 			loaded = loaded || thisLoaded;
 			
 			if(thisLoaded){
+				sprite.setColor(sf::Color(0xffffff80));
 				sprite.setTexture(texture,true);
 				sprite.setOrigin(sf::Vector2f(texture.getSize()) / 2.0f);
 				
@@ -259,6 +255,10 @@ class loadableTexture{
 		
 		void unload(){
 			loaded = false;
+		}
+		
+		bool isLoaded(){
+			return loaded;
 		}
 		
 		void toggleSmooth(){
@@ -468,6 +468,10 @@ namespace render{
 			texTex.unload();
 		}
 		
+		bool isLoaded(){
+			return texTex.isLoaded();
+		}
+		
 		void toggleSmooth(){
 			texTex.toggleSmooth();
 		}
@@ -477,15 +481,26 @@ namespace render{
 		}
 	}
 	
-	enum clr::profile meshPfl;
-	enum clr::profile wireframePfl;
-	
-	void setColors(enum clr::profile mAr,enum clr::profile wAr){
-		meshPfl = mAr;
-		wireframePfl = wAr;
+	void applyColors(unsigned int pfl,enum clr::alpha alph,bool solid){
+		switch(pfl){
+			case CLR_PFL_EDITOR:
+				clr::apply(clr::PFL_WHITE,CLR_WHITE_WHITE,alph,solid ? clr::PFL_EDITR_SOL : clr::PFL_EDITR);
+				
+				break;
+			case CLR_PFL_RANBW:
+				clr::apply(clr::PFL_WHITE,CLR_WHITE_WHITE,alph,solid ? clr::PFL_RANBW_SOL : clr::PFL_RANBW);
+				
+				break;
+			case CLR_PFL_CSTM:
+				clrCstm::apply(clr::PFL_WHITE,CLR_WHITE_WHITE,alph);
+				
+				break;
+			default:
+				break;
+		}
 	}
 	
-	void loadAndDrawTris(struct vecTrisBuf *buf,struct vecTris **tris,enum mode draw,bool customClr,bool wireframe,int iParam){
+	void loadAndDrawTris(struct vecTrisBuf *buf,struct vecTris **tris,unsigned int vert,unsigned int frag,unsigned int pfl,bool wireframe){
 		target->setActive(true);
 		resetBindings();
 		
@@ -497,39 +512,23 @@ namespace render{
 		
 		// Drawing
 		if(*tris != NULL){
+			// Initilization
 			useShader();
-			
 			vw::norm::vecGL::apply(*target,0.0,0.0,1.0,1.0);
-			uniformIParamsV(iParam,0,0,0);
 			
-			unsigned int vertMode;
-			
-			switch(draw){
-				case MODE_XY:
-					vertMode = 1;
-					
-					break;
-				case MODE_UV:
-					vertMode = 2;
-					bindTex0(tex::texTex.glTex());
-					
-					break;
-				case MODE_POSE:
-					vertMode = 3;
-					pose::upload();
-					
-					break;
+			if(vert == VERT_MODE_POSE_XY){
+				pose::upload();
 			}
 			
+			if(frag == FRAG_MODE_CLIPPED_CLR_SMPL){
+				bindTex0(tex::texTex.glTex());
+			}
+			
+			// Sub-cases
 			if(wireframe){
 				// Fill
-				if(customClr){
-					clrCstm::apply(clr::PFL_WHITE,CLR_WHITE_WHITE,clr::ALF_HALF);
-				}else{
-					clr::apply(clr::PFL_WHITE,CLR_WHITE_WHITE,clr::ALF_HALF,meshPfl);
-				}
-				
-				uniformVertFragModes(vertMode,draw == MODE_UV ? 2 : 0);
+				applyColors(pfl,clr::ALF_HALF,false);
+				uniformVertFragModes(vert,frag);
 				drawVecTris(*tris);
 				
 				// Outline
@@ -537,25 +536,15 @@ namespace render{
 				glLineWidth(LINE_WIDTH);
 				glEnable(GL_LINE_SMOOTH);
 				
-				if(customClr){
-					clrCstm::apply(clr::PFL_WHITE,CLR_WHITE_WHITE,clr::ALF_ONE);
-				}else{
-					clr::apply(clr::PFL_WHITE,CLR_WHITE_WHITE,clr::ALF_ONE,wireframePfl);
-				}
-				
-				uniformVertFragModes(vertMode,1);
+				applyColors(pfl,clr::ALF_ONE,true);
+				uniformVertFragModes(vert,FRAG_MODE_FULL_CLR);
 				drawVecTris(*tris);
 				
 				glPolygonMode(GL_FRONT_AND_BACK,GL_FILL);
 			}else{
 				// Normal drawing
-				if(customClr){
-					clrCstm::apply(clr::PFL_WHITE,CLR_WHITE_WHITE,clr::ALF_ONE);
-				}else{
-					clr::apply(clr::PFL_WHITE,CLR_WHITE_WHITE,clr::ALF_ONE,meshPfl);
-				}
-				
-				uniformVertFragModes(vertMode,draw == MODE_UV ? 2 : 0);
+				applyColors(pfl,clr::ALF_ONE,false);
+				uniformVertFragModes(vert,frag);
 				drawVecTris(*tris);
 			}
 		}
@@ -595,12 +584,16 @@ namespace hud{
 		return sf::Vector2f(newX,newY);
 	}
 	
+	unsigned int markColorI(unsigned int i){
+		return i % CLR_RANBW_NULL;
+	}
+	
 	uint32_t markColor(unsigned int i,enum clr::alpha alf){
-		return clr::get(clr::PFL_RANBW,i % CLR_RANBW_COUNT,alf);
+		return clr::get(clr::PFL_RANBW,markColorI(i),alf);
 	}
 	
 	enum markType markShape(unsigned int i){
-		return (enum markType)((i / CLR_RANBW_COUNT) % MARK_COUNT);
+		return (enum markType)((i / CLR_RANBW_NULL) % MARK_COUNT);
 	}
 	
 	// Drawing ----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -642,7 +635,7 @@ namespace hud{
 	
 	void drawHelp(enum mesherState state){
 		// Brief state indexation
-		int isTextual = stateIsTextual(state);
+		int isTextual = state::isTextual(state);
 		int isAtop = (state >= STATE_COUNT);
 		int sI = (isAtop << 1) | isTextual;
 		
@@ -827,7 +820,7 @@ namespace hud{
 		
 		#define COLREF_ICWIDTH 16
 		
-		#define COLREF_IHEIGHT (CLR_RANBW_COUNT * 2)
+		#define COLREF_IHEIGHT (CLR_RANBW_NULL * 2)
 		#define COLREF_IWIDTH (COLOR_ARRAY_MAX_COUNT / COLREF_IHEIGHT)
 		
 		#define COLREF_CHEIGHT (COLREF_IHEIGHT + (COLREF_CVPAD * 2.0))
@@ -909,7 +902,7 @@ namespace hud{
 		
 		#define VBNEREF_ICWIDTH 7
 		
-		#define VBNEREF_IHEIGHT (CLR_RANBW_COUNT * 2)
+		#define VBNEREF_IHEIGHT (CLR_RANBW_NULL * 2)
 		#define VBNEREF_IWIDTH (BONES_MAX_COUNT / VBNEREF_IHEIGHT)
 		
 		#define VBNEREF_CHEIGHT (VBNEREF_IHEIGHT + (VBNEREF_CVPAD * 2.0))
@@ -964,7 +957,7 @@ namespace hud{
 		
 		#define BNEREF_ICWIDTH 11
 		
-		#define BNEREF_IHEIGHT (CLR_RANBW_COUNT * 2)
+		#define BNEREF_IHEIGHT (CLR_RANBW_NULL * 2)
 		#define BNEREF_IWIDTH (BONES_MAX_COUNT / BNEREF_IHEIGHT)
 		
 		#define BNEREF_CHEIGHT (BNEREF_IHEIGHT + (BNEREF_CVPAD * 2.0))

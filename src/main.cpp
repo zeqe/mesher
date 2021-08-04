@@ -145,7 +145,7 @@ int16_t randI(){
 	return ((int32_t)rand() % (int32_t)INT16_MAX) * 2 + (int32_t)INT16_MIN;
 }
 
-enum mesherState state = STATE_VERTS,newState;
+enum mesherState newState;
 
 class gridLayer grid;
 std::vector<class vertLayer *> layers;
@@ -153,23 +153,6 @@ unsigned int currLayer = 0;
 
 bool currLayerValid(){
 	return currLayer < layers.size();
-}
-
-enum vertLayer::viewType stateView(){
-	switch(state){
-		case STATE_V_UVS:
-			return vertLayer::VIEW_UV;
-		case STATE_V_COLORS:
-			return vertLayer::VIEW_COLORS;
-		case STATE_V_BONES:
-			return vertLayer::VIEW_BONES;
-		case STATE_POSE:
-			return vertLayer::VIEW_POSE;
-		default:
-			return vertLayer::VIEW_XY;
-	}
-	
-	return vertLayer::VIEW_XY;
 }
 
 int main(){
@@ -203,11 +186,9 @@ int main(){
 	}
 	
 	triCn::init();
-	
 	clrCstm::init();
-	render::setColors(clr::PFL_EDITR,clr::PFL_EDITR_SOL);
-	
 	bones::init();
+	
 	pose::setModifiers(trOp::currentOp,trOp::dirty,trOp::valX,trOp::valY,trOp::valScalar);
 	pose::reset();
 	
@@ -240,6 +221,8 @@ int main(){
 	enum keyInput keyIn;
 	int statelessKI;
 	
+	bool selState;
+	
 	sf::Vector2<int32_t> tempPos;
 	
 	#define COMMAND_PARAM_COUNT 5
@@ -258,7 +241,7 @@ int main(){
 		window.clear();
 		
 		// Content render
-		if(state == STATE_V_UVS){
+		if(state::get() == STATE_VERT_UV){
 			render::tex::draw();
 		}else{
 			hud::ref::draw();
@@ -270,19 +253,19 @@ int main(){
 		
 		for(std::vector<class vertLayer *>::iterator it = layers.begin();it != layers.end();++it){
 			if(layers.begin() + currLayer == it){
-				(*it)->draw(wireframe,true);
+				(*it)->draw(currBone,wireframe,true);
 				
-				if(state == STATE_ATOP_TRI_ADD){
+				if(state::get() == STATE_ATOP_TRI_ADD){
 					triCn::drawPreview(wireframe);
 				}
 			}else{
-				(*it)->draw(wireframe,false);
+				(*it)->draw(currBone,wireframe,false);
 			}
 		}
 		
-		if(state == STATE_BONES || state == STATE_ATOP_BONE_PARENT_SET){
+		if(state::get() == STATE_BONES || state::get() == STATE_ATOP_BONE_PARENT_SET){
 			bones::draw();
-		}else if(state == STATE_POSE || state == STATE_ATOP_POSE_TRANSFORM){
+		}else if(state::get() == STATE_POSE || state::get() == STATE_ATOP_POSE_TRANSFORM){
 			pose::draw();
 		}
 		
@@ -295,30 +278,30 @@ int main(){
 		hud::drawLine(hud::LINE_HORIZONTAL,iX,iY,maxDim,clr::get(clr::PFL_EDITR,CLR_EDITR_HICONTRAST,clr::ALF_HALF));
 		
 		if(showHelp){
-			hud::drawHelp(state);
+			hud::drawHelp(state::get());
 		}
 		
-		switch(state){
-			case STATE_V_COLORS:
+		switch(state::get()){
+			case STATE_VERT_COLOR:
 			case STATE_ATOP_COLOR_SET:
-				hud::drawCustomColorsRef(currClr,state == STATE_ATOP_COLOR_SET ? strIn::buffer() : NULL);
+				hud::drawCustomColorsRef(currClr,state::get() == STATE_ATOP_COLOR_SET ? strIn::buffer() : NULL);
 				
 				break;
-			case STATE_V_BONES:
+			case STATE_VERT_BONE:
 			case STATE_POSE:
 				hud::drawVBonesRef(currBone);
 				
 				break;
 			case STATE_BONES:
 			case STATE_ATOP_BONE_PARENT_SET:
-				hud::drawBonesRef(currBone,state == STATE_ATOP_BONE_PARENT_SET ? strIn::buffer() : NULL);
+				hud::drawBonesRef(currBone,state::get() == STATE_ATOP_BONE_PARENT_SET ? strIn::buffer() : NULL);
 				
 				break;
 			default:
 				break;
 		}
 		
-		if(state == STATE_CONSOLE){
+		if(state::get() == STATE_CONSOLE){
 			if(commandFeedbackDisp){
 				strcpy(textBuffer,commandFeedback);
 			}else{
@@ -334,17 +317,17 @@ int main(){
 			);
 		}
 		
-		hud::drawBottomBar(textBuffer,snap,state == STATE_ATOP_TRI_ADD,triType);
+		hud::drawBottomBar(textBuffer,snap,state::get() == STATE_ATOP_TRI_ADD,triType);
 		
 		hud::drawLayerNav(
 			layers,
 			currLayer,
-			state == STATE_ATOP_LAYER_NAME ? strIn::buffer() : NULL,
+			state::get() == STATE_ATOP_LAYER_NAME ? strIn::buffer() : NULL,
 			&grid,
-			state == STATE_ATOP_GRID_SET ? strIn::buffer() : NULL
+			state::get() == STATE_ATOP_GRID_SET ? strIn::buffer() : NULL
 		);
 		
-		hud::drawStateState(state);
+		hud::drawStateState(state::get());
 		
 		// Done
 		window.display();
@@ -378,7 +361,7 @@ int main(){
 						run = false;
 					}
 					
-					if(state < STATE_COUNT){
+					if(state::get() < STATE_COUNT){
 						switch(statelessKI){
 							case STATELESS_KI(1,0,0,KEY_1):
 							case STATELESS_KI(1,0,0,KEY_2):
@@ -388,14 +371,13 @@ int main(){
 							case STATELESS_KI(1,0,0,KEY_6):
 							case STATELESS_KI(1,0,0,KEY_7):
 							case STATELESS_KI(1,0,0,KEY_8):
-							case STATELESS_KI(1,0,0,KEY_9):
 								newState = (enum mesherState)(keyIn - KEY_1);
 								
-								if(state == newState){
+								if(state::get() == newState){
 									break;
 								}
 								
-								if(state == STATE_CONSOLE){
+								if(state::get() == STATE_CONSOLE){
 									strIn::deactivate();
 								}
 								
@@ -403,11 +385,7 @@ int main(){
 									strIn::activate(STRIN_MAX_LEN);
 								}
 								
-								state = newState;
-								
-								for(std::vector<class vertLayer *>::iterator it = layers.begin();it != layers.end();++it){
-									(*it)->setView(stateView());
-								}
+								state::set(newState);
 								
 								break;
 							default:
@@ -454,7 +432,7 @@ int main(){
 							break;
 					}
 					
-					if(!stateIsTextual(state)){
+					if(!state::isTextual(state::get())){
 						switch(statelessKI){
 							case STATELESS_KI(0,0,0,KEY_0):
 								vw::reset(false);
@@ -479,31 +457,31 @@ int main(){
 						}
 					}
 					
-					switch(STATED_KI(state,isCtrlDown,isAltDown,isShiftDown,keyIn)){
-						case STATED_KI(STATE_VERTS,0,0,1,KEY_A):
+					switch(STATED_KI(state::get(),isCtrlDown,isAltDown,isShiftDown,keyIn)){
+						case STATED_KI(STATE_VERT_XY,0,0,1,KEY_A):
 							if(currLayerValid()){
 								layers[currLayer]->selectVert_All();
 							}
 							
 							break;
-						case STATED_KI(STATE_VERTS,0,0,1,KEY_C):
+						case STATED_KI(STATE_VERT_XY,0,0,1,KEY_C):
 							if(currLayerValid()){
 								layers[currLayer]->selectVert_Clear();
 							}
 							
 							break;
-						case STATED_KI(STATE_V_COLORS,0,1,0,KEY_S):
+						case STATED_KI(STATE_VERT_COLOR,0,1,0,KEY_S):
 							strIn::activate(8);
-							state = STATE_ATOP_COLOR_SET;
+							state::set(STATE_ATOP_COLOR_SET);
 							
 							break;
-						case STATED_KI(STATE_V_COLORS,0,0,0,KEY_UP):
-						case STATED_KI(STATE_V_COLORS,0,0,0,KEY_DOWN):
+						case STATED_KI(STATE_VERT_COLOR,0,0,0,KEY_UP):
+						case STATED_KI(STATE_VERT_COLOR,0,0,0,KEY_DOWN):
 							currClr = (COLOR_ARRAY_MAX_COUNT + currClr - (keyIn == KEY_UP) + (keyIn == KEY_DOWN)) % COLOR_ARRAY_MAX_COUNT;
 							
 							break;
-						case STATED_KI(STATE_V_BONES,0,0,0,KEY_UP):
-						case STATED_KI(STATE_V_BONES,0,0,0,KEY_DOWN):
+						case STATED_KI(STATE_VERT_BONE,0,0,0,KEY_UP):
+						case STATED_KI(STATE_VERT_BONE,0,0,0,KEY_DOWN):
 						case STATED_KI(STATE_BONES,0,0,0,KEY_UP):
 						case STATED_KI(STATE_BONES,0,0,0,KEY_DOWN):
 						case STATED_KI(STATE_POSE,0,0,0,KEY_UP):
@@ -518,7 +496,7 @@ int main(){
 							}
 							
 							{
-								struct vertLayer *newLayer = new vertLayer(100,stateView());
+								struct vertLayer *newLayer = new vertLayer(100);
 								newLayer->nameSet("layer");
 								newLayer->vertModifiers_Set((&trOp::apply),(&trOp::dirty));
 								
@@ -553,7 +531,7 @@ int main(){
 							break;
 						case STATED_KI(STATE_LAYERS,0,1,0,KEY_G):
 							strIn::activate(4);
-							state = STATE_ATOP_GRID_SET;
+							state::set(STATE_ATOP_GRID_SET);
 							
 							break;
 						case STATED_KI(STATE_LAYERS,0,1,0,KEY_N):
@@ -562,12 +540,12 @@ int main(){
 							}
 							
 							strIn::activate(LAYER_NAME_STRLEN);
-							state = STATE_ATOP_LAYER_NAME;
+							state::set(STATE_ATOP_LAYER_NAME);
 							
 							break;
 						case STATED_KI(STATE_BONES,0,1,0,KEY_S):
 							strIn::activate(2);
-							state = STATE_ATOP_BONE_PARENT_SET;
+							state::set(STATE_ATOP_BONE_PARENT_SET);
 							
 							break;
 						case STATED_KI(STATE_BONES,0,1,0,KEY_C):
@@ -579,7 +557,7 @@ int main(){
 							
 							break;
 						case STATED_KI(STATE_ATOP_TRI_ADD,0,0,0,KEY_ESC):
-							state = STATE_VERTS;
+							state::set(STATE_VERT_XY);
 							
 							break;
 						case STATED_KI(STATE_ATOP_TRI_ADD,0,0,0,KEY_1):
@@ -591,30 +569,30 @@ int main(){
 							break;
 						case STATED_KI(STATE_ATOP_TRANSFORM,0,0,0,KEY_ESC):
 							trOp::exit();
-							state = STATE_VERTS;
+							state::set(STATE_VERT_XY);
 							
 							break;
 						case STATED_KI(STATE_ATOP_COLOR_SET,0,0,0,KEY_ESC):
 							strIn::deactivate();
-							state = STATE_V_COLORS;
+							state::set(STATE_VERT_COLOR);
 							
 							break;
 						case STATED_KI(STATE_ATOP_GRID_SET,0,0,0,KEY_ESC):
 						case STATED_KI(STATE_ATOP_LAYER_NAME,0,0,0,KEY_ESC):
 							strIn::deactivate();
-							state = STATE_LAYERS;
+							state::set(STATE_LAYERS);
 							
 							break;
 						case STATED_KI(STATE_ATOP_BONE_PARENT_SET,0,0,0,KEY_ESC):
 							strIn::deactivate();
-							state = STATE_BONES;
+							state::set(STATE_BONES);
 							
 							break;
 						case STATED_KI(STATE_ATOP_POSE_TRANSFORM,0,0,0,KEY_ESC):
 							trOp::exit();
 							pose::clearUnappliedModifiers();
 							
-							state = STATE_POSE;
+							state::set(STATE_POSE);
 							
 							break;
 						default:
@@ -623,7 +601,7 @@ int main(){
 					
 					break;
 				case sf::Event::TextEntered:
-					switch(state){
+					switch(state::get()){
 						case STATE_CONSOLE:
 							commandFeedbackDisp = false;
 							
@@ -687,7 +665,7 @@ int main(){
 								clrCstm::set(currClr,strtoul(strIn::buffer(),NULL,16));
 								strIn::deactivate();
 								
-								state = STATE_V_COLORS;
+								state::set(STATE_VERT_COLOR);
 							}
 							
 							break;
@@ -696,7 +674,7 @@ int main(){
 								grid.set(atoi(strIn::buffer()));
 								strIn::deactivate();
 								
-								state = STATE_LAYERS;
+								state::set(STATE_LAYERS);
 							}
 							
 							break;
@@ -705,7 +683,7 @@ int main(){
 								layers[currLayer]->nameSet(strIn::buffer());
 								strIn::deactivate();
 								
-								state = STATE_LAYERS;
+								state::set(STATE_LAYERS);
 							}
 							
 							break;
@@ -714,7 +692,7 @@ int main(){
 								bones::setParent(currBone,atoi(strIn::buffer()));
 								strIn::deactivate();
 								
-								state = STATE_BONES;
+								state::set(STATE_BONES);
 							}
 							
 							break;
@@ -730,13 +708,9 @@ int main(){
 							
 							break;
 						case sf::Mouse::Left:
-							switch(state){
-								case STATE_VERTS:
-									if(isShiftDown){
-										if(currLayerValid()){
-											layers[currLayer]->selectVert_Nearest();
-										}
-									}else if(isAltDown){
+							switch(state::get()){
+								case STATE_VERT_XY:
+									if(isAltDown){
 										if(sf::Keyboard::isKeyPressed(sf::Keyboard::A)){
 											if(!currLayerValid()){
 												break;
@@ -746,30 +720,34 @@ int main(){
 											triCn::add(layers[currLayer],iX,iY);
 											triCn::considerPoint(iX,iY);
 											
-											state = STATE_ATOP_TRI_ADD;
+											state::set(STATE_ATOP_TRI_ADD);
 										}else if(sf::Keyboard::isKeyPressed(sf::Keyboard::T)){
 											if(trOp::init(TROP_TRANSLATE,iX,iY)){
-												state = STATE_ATOP_TRANSFORM;
+												state::set(STATE_ATOP_TRANSFORM);
 											}
 										}else if(sf::Keyboard::isKeyPressed(sf::Keyboard::R)){
 											if(trOp::init(TROP_ROTATE,iX,iY)){
-												state = STATE_ATOP_TRANSFORM;
+												state::set(STATE_ATOP_TRANSFORM);
 											}
 										}else if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)){
 											if(trOp::init(TROP_SCALE,iX,iY)){
-												state = STATE_ATOP_TRANSFORM;
+												state::set(STATE_ATOP_TRANSFORM);
 											}
+										}
+									}else{
+										if(currLayerValid()){
+											selState = layers[currLayer]->selectVert_Nearest(true,true);
 										}
 									}
 									
 									break;
-								case STATE_V_COLORS:
+								case STATE_VERT_COLOR:
 									if(currLayerValid()){
 										layers[currLayer]->nearVert_SetColor(currClr);
 									}
 									
 									break;
-								case STATE_V_BONES:
+								case STATE_VERT_BONE:
 									if(currLayerValid()){
 										layers[currLayer]->nearVert_SetBone(currBone);
 									}
@@ -789,15 +767,15 @@ int main(){
 										
 										if(sf::Keyboard::isKeyPressed(sf::Keyboard::T)){
 											if(trOp::init(TROP_TRANSLATE,iX,iY)){
-												state = STATE_ATOP_POSE_TRANSFORM;
+												state::set(STATE_ATOP_POSE_TRANSFORM);
 											}
 										}else if(sf::Keyboard::isKeyPressed(sf::Keyboard::R)){
 											if(trOp::init(TROP_ROTATE,tempPos.x,tempPos.y)){
-												state = STATE_ATOP_POSE_TRANSFORM;
+												state::set(STATE_ATOP_POSE_TRANSFORM);
 											}
 										}else if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)){
 											if(trOp::init(TROP_SCALE,tempPos.x,tempPos.y)){
-												state = STATE_ATOP_POSE_TRANSFORM;
+												state::set(STATE_ATOP_POSE_TRANSFORM);
 											}
 										}
 									}
@@ -805,7 +783,7 @@ int main(){
 									break;
 								case STATE_ATOP_TRI_ADD:
 									if(triCn::add(layers[currLayer],iX,iY)){
-										state = STATE_VERTS;
+										state::set(STATE_VERT_XY);
 									}else{
 										triCn::considerPoint(iX,iY);
 									}
@@ -824,7 +802,7 @@ int main(){
 											
 											trOp::exit();
 											
-											state = STATE_VERTS;
+											state::set(STATE_VERT_XY);
 											
 											break;
 										case TROP_STATE_NONE:
@@ -843,7 +821,7 @@ int main(){
 											pose::updateModifiers(true,currBone);
 											trOp::exit();
 											
-											state = STATE_POSE;
+											state::set(STATE_POSE);
 											
 											break;
 										case TROP_STATE_NONE:
@@ -912,8 +890,28 @@ int main(){
 					// Tranformation operation preview update
 					trOp::update(iX,iY);
 					
-					if(state == STATE_ATOP_POSE_TRANSFORM && trOp::dirty()){
+					if(state::get() == STATE_ATOP_POSE_TRANSFORM && trOp::dirty()){
 						pose::updateModifiers(false,currBone);
+					}
+					
+					// Selection updates
+					if(sf::Mouse::isButtonPressed(sf::Mouse::Left) && currLayerValid()){
+						switch(state::get()){
+							case STATE_VERT_XY:
+								layers[currLayer]->selectVert_Nearest(false,selState);
+								
+								break;
+							case STATE_VERT_COLOR:
+								layers[currLayer]->nearVert_SetColor(currClr);
+								
+								break;
+							case STATE_VERT_BONE:
+								layers[currLayer]->nearVert_SetBone(currBone);
+								
+								break;
+							default:
+								break;
+						}
 					}
 					
 					break;

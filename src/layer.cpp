@@ -133,7 +133,7 @@ unsigned int vertLayer::SEL_TRIS_COUNT(){
 }
 
 // Utility Methods -------------------------------------------------------------------------------------------------------------------------------------------
-void vertLayer::init(unsigned int maxTriCount,enum viewType initView){
+void vertLayer::init(unsigned int maxTriCount){
 	// Parameters
 	maxTris = maxTriCount;
 	
@@ -152,8 +152,9 @@ void vertLayer::init(unsigned int maxTriCount,enum viewType initView){
 	
 	modified = false;
 	
-	// View State
-	currentView = initView;
+	// Draw State Tracking
+	lastDraw = state::getDraw();
+	lastBone = 0;
 	
 	// Vertex Modifiers
 	vertModifier = NULL;
@@ -186,17 +187,6 @@ void vertLayer::end(){
 	delete[] selVerts;
 }
 
-bool vertLayer::vertsWelded(unsigned int i,unsigned int j){
-	return VERT_X(&buffer,i) == VERT_X(&buffer,j) && VERT_Y(&buffer,i) == VERT_Y(&buffer,j);
-}
-
-void vertLayer::copyVertSharedAttribs(unsigned int srcI,unsigned int destI){
-	VERT_U(&buffer,destI) = VERT_U(&buffer,srcI);
-	VERT_V(&buffer,destI) = VERT_V(&buffer,srcI);
-	
-	VERT_BONE(&buffer,destI) = VERT_BONE(&buffer,srcI);
-}
-
 void vertLayer::copyTri(struct vecTrisBuf *src,unsigned int srcI,struct vecTrisBuf *dest,unsigned int destI){
 	memcpy(dest->xy + destI * TRI_XY_VALUE_COUNT,src->xy + srcI * TRI_XY_VALUE_COUNT,TRI_XY_VALUE_COUNT * sizeof(int16_t));
 	memcpy(dest->uv + destI * TRI_UV_VALUE_COUNT,src->uv + srcI * TRI_UV_VALUE_COUNT,TRI_UV_VALUE_COUNT * sizeof(uint16_t));
@@ -204,8 +194,8 @@ void vertLayer::copyTri(struct vecTrisBuf *src,unsigned int srcI,struct vecTrisB
 }
 
 // General Globals -------------------------------------------------------------------------------------------------------------------------------------------
-vertLayer::vertLayer(unsigned int maxTriCount,enum viewType initView){
-	init(maxTriCount,initView);
+vertLayer::vertLayer(unsigned int maxTriCount){
+	init(maxTriCount);
 }
 
 vertLayer::~vertLayer(){
@@ -214,15 +204,6 @@ vertLayer::~vertLayer(){
 
 enum layerType vertLayer::type(){
 	return LAYER_VERT;
-}
-
-// View State -------------------------------------------------------------------------------------------------------------------------------------------
-void vertLayer::setView(enum viewType newView){
-	if(newView != currentView && (newView == VIEW_COLORS || currentView == VIEW_COLORS)){
-		modified = true;
-	}
-	
-	currentView = newView;
 }
 
 // Vertex Modifiers -------------------------------------------------------------------------------------------------------------------------------------------
@@ -246,20 +227,6 @@ void vertLayer::vertModifiers_Apply(){
 			(*vertModifier)(&(VERT_X(&buffer,i)),&(VERT_Y(&buffer,i)));
 		}
 	}
-	
-	// Update selections for seamless selection post-weld
-	for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
-		if(selVerts[i]){
-			for(unsigned int j = 0;j < buffer.count * TRI_VERT_COUNT;++j){
-				if(!selVerts[j] && vertsWelded(i,j)){
-					copyVertSharedAttribs(i,j);
-					selVerts[j] = true;
-				}
-			}
-		}
-	}
-	
-	// (n * s) * (n * (1 - s)) = n^2 * (1 - s)s = n^2 * (s - s^2)
 }
 
 // Inherited -------------------------------------------------------------------------------------------------------------------------------------------
@@ -348,35 +315,71 @@ class vertLayer *vertLayer::withNearestPoint(std::vector<class vertLayer *> &lay
 }
 
 // Drawing -------------------------------------------------------------------------------------------------------------------------------------------
-void vertLayer::draw(){
-	draw(false,false);
+unsigned int renderVertMode(){
+	switch(state::getDraw()){
+		case D_STATE_XY:
+		case D_STATE_COLOR:
+		case D_STATE_BONE:
+			return VERT_MODE_RAW_XY;
+		case D_STATE_UV:
+			return VERT_MODE_RAW_UV;
+		case D_STATE_VIEW:
+		case D_STATE_POSE:
+			return VERT_MODE_POSE_XY;
+	}
+	
+	return VERT_MODE_RAW_XY;
 }
 
-void vertLayer::draw(bool wireframe,bool showNearestPoint){
+unsigned int renderFragMode(){
+	switch(state::getDraw()){
+		case D_STATE_XY:
+		case D_STATE_BONE:
+			return FRAG_MODE_CLIPPED_CLR;
+		case D_STATE_UV:
+		case D_STATE_COLOR:
+		case D_STATE_VIEW:
+		case D_STATE_POSE:
+			return render::tex::isLoaded() ? FRAG_MODE_CLIPPED_CLR_SMPL : FRAG_MODE_CLIPPED_CLR;
+	}
+	
+	return FRAG_MODE_CLIPPED_CLR;
+}
+
+unsigned int renderClrPfl(){
+	switch(state::getDraw()){
+		case D_STATE_XY:
+		case D_STATE_UV:
+			return CLR_PFL_EDITOR;
+		case D_STATE_COLOR:
+		case D_STATE_VIEW:
+			return CLR_PFL_CSTM;
+		case D_STATE_BONE:
+		case D_STATE_POSE:
+			return CLR_PFL_RANBW;
+	}
+	
+	return CLR_PFL_EDITOR;
+}
+
+void vertLayer::draw(){
+	draw(0,false,false);
+}
+
+void vertLayer::draw(unsigned char currBone,bool wireframe,bool showNearestPoint){
 	if(!visible()){
 		return;
 	}
 	
-	// Draw buffer -------------------------------------------
-	enum render::mode drawMode;
-	
-	switch(currentView){
-		case VIEW_XY:
-		case VIEW_COLORS:
-		case VIEW_BONES:
-			drawMode = render::MODE_XY;
-			
-			break;
-		case VIEW_UV:
-			drawMode = render::MODE_UV;
-			
-			break;
-		case VIEW_POSE:
-			drawMode = render::MODE_POSE;
-			
-			break;
+	// State track updasion
+	if(state::getDraw() != lastDraw || currBone != lastBone){
+		lastDraw = state::getDraw();
+		lastBone = currBone;
+		
+		modified = true;
 	}
 	
+	// Draw buffer -------------------------------------------	
 	// Display tris updasion and rendering
 	if(modified || vertModifiers_Applicable()){
 		// Copying to display buffer
@@ -395,17 +398,21 @@ void vertLayer::draw(bool wireframe,bool showNearestPoint){
 		}
 		
 		// Set vertex colors if applicable
-		/*if(currentView != VIEW_COLORS){
+		if(state::getDraw() == D_STATE_XY || state::getDraw() == D_STATE_UV){
 			for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
 				VERT_COLOR(&disp,i) = selVerts[i] ? CLR_EDITR_HILIGHT : CLR_EDITR_OFFWHITE;
 			}
-		}*/
+		}else if(state::getDraw() == D_STATE_BONE || state::getDraw() == D_STATE_POSE){
+			for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
+				VERT_COLOR(&disp,i) = (VERT_BONE(&buffer,i) == currBone ? hud::markColorI(VERT_BONE(&buffer,i)) : CLR_RANBW_NULL);
+			}
+		}
 		
 		// Render
-		render::loadAndDrawTris(&disp,&dispTris,drawMode,currentView == VIEW_COLORS,wireframe,showNearestPoint ? nearVert : buffer.count * TRI_VERT_COUNT);
+		render::loadAndDrawTris(&disp,&dispTris,renderVertMode(),renderFragMode(),renderClrPfl(),wireframe);
 	}else{
 		// Default rendering
-		render::loadAndDrawTris(NULL,&dispTris,drawMode,currentView == VIEW_COLORS,wireframe,showNearestPoint ? nearVert : buffer.count * TRI_VERT_COUNT);
+		render::loadAndDrawTris(NULL,&dispTris,renderVertMode(),renderFragMode(),renderClrPfl(),wireframe);
 	}
 	
 	// State finalization
@@ -428,14 +435,14 @@ void vertLayer::draw(bool wireframe,bool showNearestPoint){
 	int16_t preDrawX,preDrawY;
 	int32_t drawX,drawY;
 	
-	if(currentView == VIEW_XY || currentView == VIEW_UV){
+	if(state::getDraw() == D_STATE_XY || state::getDraw() == D_STATE_UV){
 		for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
 			if(VERT_TYPE(&buffer,i) != TRI_TYPE_CONVEX || (i % 3) != 0){
 				continue;
 			}
 			
 			// Vertex position retrieval and adjustment as needed
-			if(currentView == VIEW_UV){
+			if(state::getDraw() == D_STATE_UV){
 				preDrawX = VERT_U(&buffer,i);
 				preDrawY = VERT_V(&buffer,i);
 			}else{
@@ -447,7 +454,7 @@ void vertLayer::draw(bool wireframe,bool showNearestPoint){
 				(*vertModifier)(&preDrawX,&preDrawY);
 			}
 			
-			if(currentView == VIEW_POSE){
+			if(state::getDraw() == D_STATE_POSE){
 				sf::Vector2<int32_t> tPos = pose::getPointPosition(VERT_BONE(&buffer,i),preDrawX,preDrawY);
 				
 				drawX = tPos.x;
@@ -464,22 +471,19 @@ void vertLayer::draw(bool wireframe,bool showNearestPoint){
 }
 
 // Selections -------------------------------------------------------------------------------------------------------------------------------------------
-void vertLayer::selectVert_Nearest(){
+bool vertLayer::selectVert_Nearest(bool toggle,bool set){
 	if(!NEARVERT_VALID()){
-		return;
+		return set;
 	}
 	
-	bool newState = !selVerts[nearVert];
-	int inc = (newState) - (!newState);
+	bool newState = toggle ? !selVerts[nearVert] : set;
 	
-	for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
-		if(vertsWelded(i,nearVert) && selVerts[i] != newState){
-			selVerts[i] = newState;
-			selVertCount += inc;
-		}
-	}
+	selVertCount += selVerts[nearVert] == newState ? 0 : ((char)newState * 2 - 1);
+	selVerts[nearVert] = newState;
 	
 	modified = true;
+	
+	return newState;
 }
 
 void vertLayer::selectVert_All(){
@@ -496,34 +500,6 @@ void vertLayer::selectVert_Clear(){
 	modified = true;
 }
 
-void vertLayer::selectVert_ByBone(unsigned char bone){
-	selVertCount = 0;
-	
-	for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
-		selVerts[i] = (VERT_BONE(&buffer,i) == bone);
-		
-		if(selVerts[i]){
-			++selVertCount;
-		}
-	}
-	
-	modified = true;
-}
-
-void vertLayer::selectVert_ByColor(unsigned char color){
-	selVertCount = 0;
-	
-	for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
-		selVerts[i] = (VERT_COLOR(&buffer,i) == color);
-		
-		if(selVerts[i]){
-			++selVertCount;
-		}
-	}
-	
-	modified = true;
-}
-
 // Buffer Operations -------------------------------------------------------------------------------------------------------------------------------------------
 uint16_t norm16_StoU(int16_t val){
 	return (uint16_t)((int32_t)val - (int32_t)INT16_MIN);
@@ -534,29 +510,21 @@ int16_t norm16_UtoS(uint16_t val){
 }
 
 void vertLayer::nearVert_SetColor(unsigned char color){
-	bool set = false;
-	
-	for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
-		if(i / TRI_VERT_COUNT == nearTri && vertsWelded(i,nearVert)){
-			VERT_COLOR(&buffer,i) = color;
-			set = true;
-		}
+	if(!NEARVERT_VALID()){
+		return;
 	}
 	
-	modified = modified || set;
+	VERT_COLOR(&buffer,nearVert) = color;
+	modified = true;
 }
 
 void vertLayer::nearVert_SetBone(unsigned char bone){
-	bool set = false;
-	
-	for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
-		if(vertsWelded(i,nearVert)){
-			VERT_BONE(&buffer,i) = bone;
-			set = true;
-		}
+	if(!NEARVERT_VALID()){
+		return;
 	}
 	
-	modified = modified || set;
+	VERT_BONE(&buffer,nearVert) = bone;
+	modified = true;
 }
 
 void vertLayer::tris_Add(int16_t x0,int16_t y0,int16_t x1,int16_t y1,int16_t x2,int16_t y2,unsigned char type){
@@ -575,34 +543,15 @@ void vertLayer::tris_Add(int16_t x0,int16_t y0,int16_t x1,int16_t y1,int16_t x2,
 	VERT_Y(&buffer,TRI_V(buffer.count,2)) = y2;
 	
 	// Other uniform data
-	unsigned int shared,k;
-	
 	for(unsigned int i = 0;i < TRI_VERT_COUNT;++i){
-		k = TRI_V(buffer.count,i);
+		unsigned int j = TRI_V(buffer.count,i);
 		
-		// Check for welded vertices upon creation
-		shared = buffer.count * TRI_VERT_COUNT;
+		VERT_U(&buffer,j) = norm16_StoU(VERT_X(&buffer,j));
+		VERT_V(&buffer,j) = norm16_StoU(VERT_Y(&buffer,j));
 		
-		for(unsigned int j = 0;j < buffer.count * TRI_VERT_COUNT;++j){
-			if(vertsWelded(k,j)){
-				shared = j;
-			}
-		}
-		
-		// Assign attribute values accordingly
-		VERT_TYPE(&buffer,k) = type;
-		VERT_COLOR(&buffer,k) = 0;
-		
-		if(shared < buffer.count * TRI_VERT_COUNT){
-			// Welded case
-			copyVertSharedAttribs(shared,k);
-		}else{
-			// Unwelded case
-			VERT_U(&buffer,k) = norm16_StoU(VERT_X(&buffer,k));
-			VERT_V(&buffer,k) = norm16_StoU(VERT_Y(&buffer,k));
-			
-			VERT_BONE(&buffer,k) = 0;
-		}
+		VERT_TYPE(&buffer,j) = type;
+		VERT_BONE(&buffer,j) = 0;
+		VERT_COLOR(&buffer,j) = 0;
 	}
 	
 	// Selection clearance

@@ -1,5 +1,6 @@
 #include <cstdlib>
 
+#include "state.hpp"
 #include "triConstruct.hpp"
 #include "colors.hpp"
 #include "graphics.hpp"
@@ -93,7 +94,7 @@ namespace triCn{
 			}
 			
 			// Drawing
-			render::loadAndDrawTris(&constructBuf,&constructTri,render::MODE_XY,false,wireframe,3);
+			render::loadAndDrawTris(&constructBuf,&constructTri,VERT_MODE_RAW_XY,FRAG_MODE_CLIPPED_CLR,CLR_PFL_EDITOR,wireframe);
 		}
 		
 		// Draw vertices placed

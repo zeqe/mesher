@@ -16,6 +16,7 @@ namespace clr{
 			0x00000000,
 			0x00000000,
 			0x00000000,
+			0x00000000
 		},
 		// PFL_EDITR
 		{
@@ -27,6 +28,7 @@ namespace clr{
 			0x00000000,
 			0x00000000,
 			0x00000000,
+			0x00000000
 		},
 		// PFL_EDITR_SOL
 		{
@@ -38,11 +40,19 @@ namespace clr{
 			0x00000000,
 			0x00000000,
 			0x00000000,
+			0x00000000
 		},
 		// PFL_RANBW
 		{
 			0x6d00f1af, 0x010ae1af, 0x11dcfdaf, 0x06ce25af,
-			0xecff29af, 0xf77a02af, 0xd50014af, 0xd933a3af
+			0xecff29af, 0xf77a02af, 0xd50014af, 0xd933a3af,
+			0xf1f1f1af
+		},
+		// PFL_RANBW_SOL
+		{
+			0x6d00f1b0, 0x010ae1b0, 0x11dcfdb0, 0x06ce25b0,
+			0xecff29b0, 0xf77a02b0, 0xd50014b0, 0xd933a3b0,
+			0xf1f1f1b0
 		}
 	};
 	
@@ -50,7 +60,8 @@ namespace clr{
 		CLR_WHITE_COUNT, // PFL_WHITE
 		CLR_EDITR_COUNT, // PFL_EDITR
 		CLR_EDITR_COUNT, // PFL_EDITR_SOL
-		CLR_RANBW_COUNT  // PFL_RANBW
+		CLR_RANBW_COUNT, // PFL_RANBW
+		CLR_RANBW_COUNT  // PFL_RANBW_SOL
 	};
 	
 	const unsigned char COLOR_ALPHAS[ALF_COUNT] = {

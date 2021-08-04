@@ -1,7 +1,7 @@
 #ifndef COLORS_INCLUDED
 	#include <cstdint>
 	
-	#define CLR_PFL_COLOR_COUNT 8
+	#define CLR_PFL_COLOR_COUNT 9
 	
 	#define CLR_WHITE_WHITE 0
 	#define CLR_WHITE_COUNT 1
@@ -11,7 +11,8 @@
 	#define CLR_EDITR_HICONTRAST 2
 	#define CLR_EDITR_COUNT 3
 	
-	#define CLR_RANBW_COUNT 8
+	#define CLR_RANBW_NULL 8
+	#define CLR_RANBW_COUNT 9
 	
 	namespace clr{
 		enum profile{
@@ -19,6 +20,7 @@
 			PFL_EDITR,
 			PFL_EDITR_SOL,
 			PFL_RANBW,
+			PFL_RANBW_SOL,
 			
 			PFL_COUNT
 		};

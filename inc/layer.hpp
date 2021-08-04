@@ -7,6 +7,8 @@
 		#include <vecGL/vecTris.h>
 	}
 	
+	#include "state.hpp"
+	
 	#define LAYER_NAME_STRLEN 10
 	
 	enum layerType{
@@ -50,15 +52,6 @@
 	};
 	
 	class vertLayer: public layer{
-		public:
-			enum viewType{
-				VIEW_XY,
-				VIEW_UV,
-				VIEW_COLORS,
-				VIEW_BONES,
-				VIEW_POSE
-			};
-			
 		private:
 			// Parameters
 			unsigned int maxTris;
@@ -68,8 +61,9 @@
 			struct vecTris *dispTris;
 			bool modified;
 			
-			// View State
-			enum viewType currentView;
+			// Draw State Tracking
+			enum drawState lastDraw;
+			unsigned char lastBone;
 			
 			// Vertex Modifiers
 			void (*vertModifier)(int16_t*,int16_t*);
@@ -94,23 +88,17 @@
 			unsigned int SEL_TRIS_COUNT();
 			
 			// Utility methods ---------------------
-			void init(unsigned int maxTriCount,enum viewType initView);
+			void init(unsigned int maxTriCount);
 			void end();
 			
-			bool vertsWelded(unsigned int i,unsigned int j);
-			
-			void copyVertSharedAttribs(unsigned int srcI,unsigned int destI);
 			void copyTri(struct vecTrisBuf *src,unsigned int srcI,struct vecTrisBuf *dest,unsigned int destI);
 			
 		public:
 			// General Globals ---------------------
-			vertLayer(unsigned int maxTriCount,enum viewType initView);
+			vertLayer(unsigned int maxTriCount);
 			~vertLayer();
 			
 			enum layerType type();
-			
-			// View State ------------------
-			void setView(enum viewType newView);
 			
 			// Vertex Modifiers ------------------
 			void vertModifiers_Set(void (*mod)(int16_t*,int16_t*),bool (*modEnabled)());
@@ -128,15 +116,12 @@
 			static class vertLayer *withNearestPoint(std::vector<class vertLayer *> &layers);
 			
 			void draw();
-			void draw(bool wireframe,bool showNearestPoint);
+			void draw(unsigned char currBone,bool wireframe,bool showNearestPoint);
 			
 			// Selections ---------------------
-			void selectVert_Nearest();
+			bool selectVert_Nearest(bool toggle,bool set);
 			void selectVert_All();
 			void selectVert_Clear();
-			
-			void selectVert_ByBone(unsigned char bone);
-			void selectVert_ByColor(unsigned char color);
 			
 			// Buffer Operations ---------------------
 			void nearVert_SetColor(unsigned char color);

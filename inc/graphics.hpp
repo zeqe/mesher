@@ -29,20 +29,26 @@
 		namespace tex{
 			bool load(const char *source);
 			void unload();
+			bool isLoaded();
 			
 			void toggleSmooth();
 			void draw();
 		}
 		
 		// Rendering
-		enum mode{
-			MODE_XY,
-			MODE_UV,
-			MODE_POSE
-		};
+		#define VERT_MODE_RAW_XY 1
+		#define VERT_MODE_RAW_UV 2
+		#define VERT_MODE_POSE_XY 3
 		
-		void setColors(enum clr::profile mAr,enum clr::profile wAr);
-		void loadAndDrawTris(struct vecTrisBuf *buf,struct vecTris **tris,enum mode draw,bool customClr,bool wireframe,int iParam);
+		#define FRAG_MODE_CLIPPED_CLR 0
+		#define FRAG_MODE_FULL_CLR 1
+		#define FRAG_MODE_CLIPPED_CLR_SMPL 2
+		
+		#define CLR_PFL_EDITOR 0
+		#define CLR_PFL_RANBW 1
+		#define CLR_PFL_CSTM 2
+		
+		void loadAndDrawTris(struct vecTrisBuf *buf,struct vecTris **tris,unsigned int vert,unsigned int frag,unsigned int pfl,bool wireframe);
 	}
 	
 	namespace hud{
@@ -55,6 +61,7 @@
 		};
 		
 		sf::Vector2f charPosition(enum corner c,float x,float y);
+		unsigned int markColorI(unsigned int i);
 		
 		// Drawing Static UI
 		void drawCenter();

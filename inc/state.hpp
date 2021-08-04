@@ -1,10 +1,9 @@
 #ifndef STATE_INCLUDED
 	enum mesherState{
-		STATE_VERTS,
-		STATE_TRIS,
-		STATE_V_UVS,
-		STATE_V_COLORS,
-		STATE_V_BONES,
+		STATE_VERT_XY,
+		STATE_VERT_UV,
+		STATE_VERT_COLOR,
+		STATE_VERT_BONE,
 		STATE_LAYERS,
 		STATE_BONES,
 		STATE_POSE,
@@ -23,7 +22,22 @@
 		TOTAL_STATE_COUNT
 	};
 	
-	bool stateIsTextual(enum mesherState state);
+	enum drawState{
+		D_STATE_XY,
+		D_STATE_UV,
+		D_STATE_COLOR,
+		D_STATE_BONE,
+		D_STATE_VIEW,
+		D_STATE_POSE
+	};
+	
+	namespace state{
+		bool isTextual(enum mesherState state);
+		
+		void set(enum mesherState newState);
+		enum mesherState get();
+		enum drawState getDraw();
+	}
 	
 	#define STATE_INCLUDED
 #endif
