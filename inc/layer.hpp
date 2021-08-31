@@ -72,6 +72,9 @@
 			// Nearest Elements
 			unsigned int nearVert,nearTri;
 			
+			int32_t neighborVerts[TRI_VERT_COUNT * 2];
+			unsigned int neighborCurrent;
+			
 			// Selection
 			unsigned char *selVerts;
 			unsigned int selVertCount;
@@ -92,6 +95,12 @@
 			void end();
 			
 			void copyTri(struct vecTrisBuf *src,unsigned int srcI,struct vecTrisBuf *dest,unsigned int destI);
+			
+			unsigned int renderVertMode();
+			unsigned int renderFragMode();
+			unsigned int renderClrPfl();
+			
+			sf::Vector2<int32_t> modedVertPosition(unsigned int i);
 			
 		public:
 			// General Globals ---------------------

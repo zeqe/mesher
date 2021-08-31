@@ -133,6 +133,14 @@ unsigned int vertLayer::SEL_TRIS_COUNT(){
 	return maxTris;
 }
 
+uint16_t norm16_StoU(int16_t val){
+	return (uint16_t)((int32_t)val - (int32_t)INT16_MIN);
+}
+
+int16_t norm16_UtoS(uint16_t val){
+	return (int16_t)((int32_t)val + (int32_t)INT16_MIN);
+}
+
 // Utility Methods -------------------------------------------------------------------------------------------------------------------------------------------
 void vertLayer::init(unsigned int maxTriCount){
 	// Parameters
@@ -194,6 +202,77 @@ void vertLayer::copyTri(struct vecTrisBuf *src,unsigned int srcI,struct vecTrisB
 	memcpy(dest->tbc + destI * TRI_TBC_VALUE_COUNT,src->tbc + srcI * TRI_TBC_VALUE_COUNT,TRI_TBC_VALUE_COUNT * sizeof(uint8_t));
 }
 
+unsigned int vertLayer::renderVertMode(){
+	switch(state::getDraw()){
+		case D_STATE_XY:
+		case D_STATE_COLOR:
+		case D_STATE_BONE:
+			return VERT_MODE_RAW_XY;
+		case D_STATE_UV:
+			return VERT_MODE_RAW_UV;
+		case D_STATE_VIEW:
+		case D_STATE_POSE:
+			return VERT_MODE_POSE_XY;
+	}
+	
+	return VERT_MODE_RAW_XY;
+}
+
+unsigned int vertLayer::renderFragMode(){
+	switch(state::getDraw()){
+		case D_STATE_XY:
+		case D_STATE_BONE:
+			return FRAG_MODE_CLIPPED_CLR;
+		case D_STATE_UV:
+		case D_STATE_COLOR:
+		case D_STATE_VIEW:
+		case D_STATE_POSE:
+			return render::tex::isLoaded() ? FRAG_MODE_CLIPPED_CLR_SMPL : FRAG_MODE_CLIPPED_CLR;
+	}
+	
+	return FRAG_MODE_CLIPPED_CLR;
+}
+
+unsigned int vertLayer::renderClrPfl(){
+	switch(state::getDraw()){
+		case D_STATE_XY:
+		case D_STATE_UV:
+			return CLR_PFL_EDITOR;
+		case D_STATE_COLOR:
+		case D_STATE_VIEW:
+			return CLR_PFL_CSTM;
+		case D_STATE_BONE:
+		case D_STATE_POSE:
+			return CLR_PFL_RANBW;
+	}
+	
+	return CLR_PFL_EDITOR;
+}
+
+sf::Vector2<int32_t> vertLayer::modedVertPosition(unsigned int i){
+	sf::Vector2<int32_t> vP;
+	
+	switch(renderVertMode()){
+		case VERT_MODE_RAW_UV:
+			vP.x = norm16_UtoS(VERT_U(&buffer,i));
+			vP.y = norm16_UtoS(VERT_V(&buffer,i));
+			
+			break;
+		case VERT_MODE_POSE_XY:
+			vP = pose::getPointPosition(VERT_BONE(&buffer,i),VERT_X(&buffer,i),VERT_Y(&buffer,i));
+			
+			break;
+		case VERT_MODE_RAW_XY:
+		default:
+			vP.x = VERT_X(&buffer,i);
+			vP.y = VERT_Y(&buffer,i);
+			
+			break;
+	}
+	
+	return vP;
+}
+
 // General Globals -------------------------------------------------------------------------------------------------------------------------------------------
 vertLayer::vertLayer(unsigned int maxTriCount){
 	init(maxTriCount);
@@ -243,31 +322,48 @@ bool vertLayer::nearestPoint_Find(unsigned int radius){
 	
 	// Searching for nearest vertex index
 	uint64_t dist,nearDist = UINT64_MAX;
-	unsigned int tri;
+	sf::Vector2<int32_t> vPs[TRI_VERT_COUNT];
 	
-	for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
-		// Skip selected vertices amid modification
-		if(vertModifiers_Applicable() && selVerts[i]){
-			continue;
+	for(unsigned int i = 0;i < buffer.count;++i){
+		// Calculate triangle vertex positions
+		for(unsigned int j = 0;j < TRI_VERT_COUNT;++j){
+			vPs[j] = modedVertPosition(TRI_V(i,j));
 		}
 		
-		// Considering only those within the radius and hovered triangle
-		dist = geom::distSquared_I(VERT_X(&buffer,i),VERT_Y(&buffer,i),iX,iY);
-		tri = i / TRI_VERT_COUNT;
-		
-		if(
-			dist < radius * radius && dist < nearDist &&
-			geom::pointInTri(
-				iX,iY,
-				VERT_X(&buffer,TRI_V(tri,0)),VERT_Y(&buffer,TRI_V(tri,0)),
-				VERT_X(&buffer,TRI_V(tri,1)),VERT_Y(&buffer,TRI_V(tri,1)),
-				VERT_X(&buffer,TRI_V(tri,2)),VERT_Y(&buffer,TRI_V(tri,2))
-			)
-		){
-			nearVert = i;
-			nearTri = tri;
+		// Perform closest-vertex search
+		for(unsigned int j = 0;j < TRI_VERT_COUNT;++j){
+			// Skip selected vertices amid modification
+			if(vertModifiers_Applicable() && selVerts[i]){
+				continue;
+			}
 			
-			nearDist = dist;
+			// Considering only those within the radius and hovered triangle
+			dist = geom::distSquared_I(vPs[j].x,vPs[j].y,iX,iY);
+			
+			if(
+				dist < radius * radius && dist < nearDist &&
+				geom::pointInTri(
+					iX,iY,
+					vPs[0].x,vPs[0].y,
+					vPs[1].x,vPs[1].y,
+					vPs[2].x,vPs[2].y
+				)
+			){
+				// Current elements
+				nearVert = TRI_V(i,j);
+				nearTri = i;
+				
+				// Neighbor data
+				for(unsigned int k = 0;k < TRI_VERT_COUNT;++k){
+					neighborVerts[k * 2 + 0] = vPs[k].x;
+					neighborVerts[k * 2 + 1] = vPs[k].y;
+				}
+				
+				neighborCurrent = j;
+				
+				// Algorithm metric update
+				nearDist = dist;
+			}
 		}
 	}
 	
@@ -316,53 +412,6 @@ class vertLayer *vertLayer::withNearestPoint(std::vector<class vertLayer *> &lay
 }
 
 // Drawing -------------------------------------------------------------------------------------------------------------------------------------------
-unsigned int renderVertMode(){
-	switch(state::getDraw()){
-		case D_STATE_XY:
-		case D_STATE_COLOR:
-		case D_STATE_BONE:
-			return VERT_MODE_RAW_XY;
-		case D_STATE_UV:
-			return VERT_MODE_RAW_UV;
-		case D_STATE_VIEW:
-		case D_STATE_POSE:
-			return VERT_MODE_POSE_XY;
-	}
-	
-	return VERT_MODE_RAW_XY;
-}
-
-unsigned int renderFragMode(){
-	switch(state::getDraw()){
-		case D_STATE_XY:
-		case D_STATE_BONE:
-			return FRAG_MODE_CLIPPED_CLR;
-		case D_STATE_UV:
-		case D_STATE_COLOR:
-		case D_STATE_VIEW:
-		case D_STATE_POSE:
-			return render::tex::isLoaded() ? FRAG_MODE_CLIPPED_CLR_SMPL : FRAG_MODE_CLIPPED_CLR;
-	}
-	
-	return FRAG_MODE_CLIPPED_CLR;
-}
-
-unsigned int renderClrPfl(){
-	switch(state::getDraw()){
-		case D_STATE_XY:
-		case D_STATE_UV:
-			return CLR_PFL_EDITOR;
-		case D_STATE_COLOR:
-		case D_STATE_VIEW:
-			return CLR_PFL_CSTM;
-		case D_STATE_BONE:
-		case D_STATE_POSE:
-			return CLR_PFL_RANBW;
-	}
-	
-	return CLR_PFL_EDITOR;
-}
-
 void vertLayer::draw(){
 	draw(0,false,false);
 }
@@ -399,11 +448,11 @@ void vertLayer::draw(unsigned char currBone,bool wireframe,bool showNearestPoint
 		}
 		
 		// Set vertex colors if applicable
-		if(state::getDraw() == D_STATE_XY || state::getDraw() == D_STATE_UV){
+		if(renderClrPfl() == CLR_PFL_EDITOR){
 			for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
 				VERT_COLOR(&disp,i) = selVerts[i] ? CLR_EDITR_HILIGHT : CLR_EDITR_OFFWHITE;
 			}
-		}else if(state::getDraw() == D_STATE_BONE || state::getDraw() == D_STATE_POSE){
+		}else if(renderClrPfl() == CLR_PFL_RANBW){
 			for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
 				VERT_COLOR(&disp,i) = (VERT_BONE(&buffer,i) == currBone ? hud::markColorI(VERT_BONE(&buffer,i)) : CLR_RANBW_NULL);
 			}
@@ -419,16 +468,13 @@ void vertLayer::draw(unsigned char currBone,bool wireframe,bool showNearestPoint
 	// State finalization
 	modified = vertModifiers_Applicable();
 	
+	// None-pose indicators ahead -----------------------------------------------------------------------------------------------------------------------------------
+	if(renderVertMode() == VERT_MODE_POSE_XY){
+		return;
+	}
+	
 	// Draw nearest vertex/currrent triangle indicator -------------------------------------------
 	if(showNearestPoint && nearVert != NO_NEAR_ELMNT){
-		// Indices calculation
-		unsigned int base,srcMod3,a,b;
-		
-		base = nearTri * TRI_VERT_COUNT;
-		srcMod3 = (nearVert - base);
-		a = base + ((srcMod3 + 1) % TRI_VERT_COUNT);
-		b = base + ((srcMod3 + 2) % TRI_VERT_COUNT);
-		
 		// Color calculation
 		uint32_t indicatorColor;
 		
@@ -448,51 +494,40 @@ void vertLayer::draw(unsigned char currBone,bool wireframe,bool showNearestPoint
 				break;
 		}
 		
+		// Indices calculation
+		unsigned int a = neighborCurrent;
+		unsigned int b = (neighborCurrent + 1) % TRI_VERT_COUNT;
+		unsigned int c = (neighborCurrent + 2) % TRI_VERT_COUNT;
+		
 		// Draw
 		hud::drawWedge(
-			VERT_X(&disp,nearVert),VERT_Y(&disp,nearVert),
-			VERT_X(&disp,a),VERT_Y(&disp,a),
-			VERT_X(&disp,b),VERT_Y(&disp,b),
+			neighborVerts[a * 2 + 0],neighborVerts[a * 2 + 1],
+			neighborVerts[b * 2 + 0],neighborVerts[b * 2 + 1],
+			neighborVerts[c * 2 + 0],neighborVerts[c * 2 + 1],
 			TRI_VERT_MARKER_RADIUS,indicatorColor
 		);
 	}
 	
 	// Draw convex handles -------------------------------------------
-	int16_t preDrawX,preDrawY;
-	int32_t drawX,drawY;
+	sf::Vector2<int16_t> vP16;
+	sf::Vector2<int32_t> vP32;
 	
-	if(state::getDraw() == D_STATE_XY || state::getDraw() == D_STATE_UV){
-		for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
-			if(VERT_TYPE(&buffer,i) != TRI_TYPE_CONVEX || (i % 3) != 0){
-				continue;
-			}
-			
-			// Vertex position retrieval and adjustment as needed
-			if(state::getDraw() == D_STATE_UV){
-				preDrawX = VERT_U(&buffer,i);
-				preDrawY = VERT_V(&buffer,i);
-			}else{
-				preDrawX = VERT_X(&buffer,i);
-				preDrawY = VERT_Y(&buffer,i);
-			}
-			
-			if(selVerts[i] && vertModifiers_Applicable()){
-				(*vertModifier)(&preDrawX,&preDrawY);
-			}
-			
-			if(state::getDraw() == D_STATE_POSE){
-				sf::Vector2<int32_t> tPos = pose::getPointPosition(VERT_BONE(&buffer,i),preDrawX,preDrawY);
-				
-				drawX = tPos.x;
-				drawY = tPos.y;
-			}else{
-				drawX = preDrawX;
-				drawY = preDrawY;
-			}
-			
-			// Drawing
-			hud::drawCircle(drawX,drawY,false,POINT_RADIUS,clr::get(clr::PFL_EDITR,selVerts[i] ? CLR_EDITR_HILIGHT : CLR_EDITR_OFFWHITE,clr::ALF_HALF));
+	for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
+		if(VERT_TYPE(&buffer,i) != TRI_TYPE_CONVEX || (i % 3) != 0){
+			continue;
 		}
+		
+		// Vertex position retrieval and adjustment as needed
+		vP32 = modedVertPosition(i);
+		vP16.x = vP32.x;
+		vP16.y = vP32.y;
+		
+		if(vertModifiers_Applicable() && selVerts[i]){
+			(*vertModifier)(&(vP16.x),&(vP16.y));
+		}
+		
+		// Drawing
+		hud::drawCircle(vP16.x,vP16.y,false,POINT_RADIUS,clr::get(clr::PFL_EDITR,selVerts[i] ? CLR_EDITR_HILIGHT : CLR_EDITR_OFFWHITE,clr::ALF_HALF));
 	}
 }
 
@@ -527,14 +562,6 @@ void vertLayer::selectVert_Clear(){
 }
 
 // Buffer Operations -------------------------------------------------------------------------------------------------------------------------------------------
-uint16_t norm16_StoU(int16_t val){
-	return (uint16_t)((int32_t)val - (int32_t)INT16_MIN);
-}
-
-int16_t norm16_UtoS(uint16_t val){
-	return (int16_t)((int32_t)val + (int32_t)INT16_MIN);
-}
-
 void vertLayer::nearVert_SetColor(unsigned char color){
 	if(!NEARVERT_VALID()){
 		return;
