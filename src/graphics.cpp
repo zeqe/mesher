@@ -92,9 +92,12 @@ sf::ConvexShape wedge;
 #define LINE_WIDTH 2.0
 
 // Text ------------------------------------------------------------
+#define HUD_CHAR_SIZE 18
+
 sf::Font hudFont;
 
-#define HUD_CHAR_SIZE 18
+#define HUD_TEXT(str) sf::Text(str,hudFont,HUD_CHAR_SIZE)
+#define HUD_TEXT_INIT(name,str) sf::Text name(str,hudFont,HUD_CHAR_SIZE)
 
 float charWidth,charHeight,charVDiff;
 char textBuffer[50];
@@ -103,47 +106,44 @@ char textBuffer[50];
 #define STATE_SYMBOL_WIDTH 2
 #define STATE_SYMBOL_UNIT_WIDTH (STATE_SYMBOL_WIDTH + 1)
 
-sf::Text hudText = sf::Text("",hudFont,HUD_CHAR_SIZE);
-
 sf::Text mesherStateSymbols[STATE_COUNT] = {
-	sf::Text("xy ",hudFont,HUD_CHAR_SIZE), // STATE_VERT_XY
-	sf::Text("uv ",hudFont,HUD_CHAR_SIZE), // STATE_VERT_UV
-	sf::Text("vc ",hudFont,HUD_CHAR_SIZE), // STATE_VERT_COLOR
-	sf::Text("vb ",hudFont,HUD_CHAR_SIZE), // STATE_VERT_BONE
-	sf::Text("la ",hudFont,HUD_CHAR_SIZE), // STATE_LAYERS
-	sf::Text("bo ",hudFont,HUD_CHAR_SIZE), // STATE_BONES
-	sf::Text("po ",hudFont,HUD_CHAR_SIZE), // STATE_POSE
-	sf::Text("co ",hudFont,HUD_CHAR_SIZE)  // STATE_CONSOLE
+	HUD_TEXT("xy "), // STATE_VERT_XY
+	HUD_TEXT("uv "), // STATE_VERT_UV
+	HUD_TEXT("vc "), // STATE_VERT_COLOR
+	HUD_TEXT("vb "), // STATE_VERT_BONE
+	HUD_TEXT("la "), // STATE_LAYERS
+	HUD_TEXT("bo "), // STATE_BONES
+	HUD_TEXT("po "), // STATE_POSE
+	HUD_TEXT("co ")  // STATE_CONSOLE
 };
 
 #define STATE_TITLE_MAX_LEN 18
 
 sf::Text mesherStateTitles[TOTAL_STATE_COUNT] = {
-	sf::Text("Vertex XY",hudFont,HUD_CHAR_SIZE),		// STATE_VERT_XY
-	sf::Text("Vertex UV",hudFont,HUD_CHAR_SIZE),		// STATE_VERT_UV
-	sf::Text("Vertex Colour",hudFont,HUD_CHAR_SIZE),	// STATE_VERT_COLOR
-	sf::Text("Vertex Bone",hudFont,HUD_CHAR_SIZE),		// STATE_VERT_BONE
-	sf::Text("Layers",hudFont,HUD_CHAR_SIZE),			// STATE_LAYERS
-	sf::Text("Bones",hudFont,HUD_CHAR_SIZE),			// STATE_BONES
-	sf::Text("Pose",hudFont,HUD_CHAR_SIZE),				// STATE_POSE
-	sf::Text("Console",hudFont,HUD_CHAR_SIZE),			// STATE_CONSOLE
-	sf::Text("---",hudFont,HUD_CHAR_SIZE),				// STATE_COUNT
-	sf::Text("<Add Tri>",hudFont,HUD_CHAR_SIZE),		// STATE_ATOP_TRI_ADD
-	sf::Text("<Transform>",hudFont,HUD_CHAR_SIZE),		// STATE_ATOP_TRANSFORM
-	sf::Text("<Color Set>",hudFont,HUD_CHAR_SIZE),		// STATE_ATOP_COLOR_SET
-	sf::Text("<Grid Set>",hudFont,HUD_CHAR_SIZE),		// STATE_ATOP_GRID_SET
-	sf::Text("<Layer Name>",hudFont,HUD_CHAR_SIZE),		// STATE_ATOP_LAYER_NAME
-	sf::Text("<Parent Set>",hudFont,HUD_CHAR_SIZE),		// STATE_ATOP_BONE_PARENT_SET
-	sf::Text("<Transform>",hudFont,HUD_CHAR_SIZE)		// STATE_ATOP_POSE_TRANSFORM
+	HUD_TEXT("Vertex XY"),		// STATE_VERT_XY
+	HUD_TEXT("Vertex UV"),		// STATE_VERT_UV
+	HUD_TEXT("Vertex Colour"),	// STATE_VERT_COLOR
+	HUD_TEXT("Vertex Bone"),	// STATE_VERT_BONE
+	HUD_TEXT("Layers"),			// STATE_LAYERS
+	HUD_TEXT("Bones"),			// STATE_BONES
+	HUD_TEXT("Pose"),			// STATE_POSE
+	HUD_TEXT("Console"),		// STATE_CONSOLE
+	HUD_TEXT("---"),			// STATE_COUNT
+	HUD_TEXT("<Add Tri>"),		// STATE_ATOP_TRI_ADD
+	HUD_TEXT("<Transform>"),	// STATE_ATOP_TRANSFORM
+	HUD_TEXT("<Color Set>"),	// STATE_ATOP_COLOR_SET
+	HUD_TEXT("<Grid Set>"),		// STATE_ATOP_GRID_SET
+	HUD_TEXT("<Layer Name>"),	// STATE_ATOP_LAYER_NAME
+	HUD_TEXT("<Parent Set>"),	// STATE_ATOP_BONE_PARENT_SET
+	HUD_TEXT("<Transform>")		// STATE_ATOP_POSE_TRANSFORM
 };
 
-sf::Text mesherHelpTitleUnderline = sf::Text(std::string(40,' '),hudFont,HUD_CHAR_SIZE);
-
-sf::Text mesherHelpGeneralTitle = sf::Text("Global",hudFont,HUD_CHAR_SIZE);
+sf::Text mesherHelpTitleUnderline = HUD_TEXT(std::string(40,' '));
+sf::Text mesherHelpGeneralTitle = HUD_TEXT("Global");
 
 sf::Text mesherHelpGenerals[4] = {
 	// All
-	sf::Text(
+	HUD_TEXT(
 		"q+esc:      quit\n"
 		"ctrl+[1-9]: change mode\n"
 		"\n"
@@ -154,12 +154,9 @@ sf::Text mesherHelpGenerals[4] = {
 		"\n"
 		"shift+?: toggle help    shift+g: hide/show grid\n"
 		"shift+|: toggle snap    shift+h: hide/show current layer\n"
-		,
-		hudFont,
-		HUD_CHAR_SIZE
 	),
 	// Textual
-	sf::Text(
+	HUD_TEXT(
 		"q+esc:      quit\n"
 		"ctrl+[1-9]: change mode\n"
 		"\n"
@@ -169,12 +166,9 @@ sf::Text mesherHelpGenerals[4] = {
 		"\n"
 		"shift+?: toggle help\n"
 		"shift+|: toggle snap\n"
-		,
-		hudFont,
-		HUD_CHAR_SIZE
 	),
 	// Atop
-	sf::Text(
+	HUD_TEXT(
 		"q+esc: quit\n"
 		"esc:   exit mode\n"
 		"\n"
@@ -185,12 +179,9 @@ sf::Text mesherHelpGenerals[4] = {
 		"\n"
 		"shift+?: toggle help    shift+g: hide/show grid\n"
 		"shift+|: toggle snap    shift+h: hide/show current layer\n"
-		,
-		hudFont,
-		HUD_CHAR_SIZE
 	),
 	// Textual Atop
-	sf::Text(
+	HUD_TEXT(
 		"q+esc: quit\n"
 		"esc:   exit mode\n"
 		"\n"
@@ -200,54 +191,45 @@ sf::Text mesherHelpGenerals[4] = {
 		"\n"
 		"shift+?: toggle help\n"
 		"shift+|: toggle snap\n"
-		,
-		hudFont,
-		HUD_CHAR_SIZE
 	)
 };
 
 sf::Text mesherHelpStates[STATE_COUNT] = {
 	// STATE_VERT_XY
-	sf::Text(
+	HUD_TEXT(
 		"shift+LM: select/unselect nearest\n"
 		"shift+a:  select all\n"
 		"shift+c:  unselect all\n"
-		,
-		hudFont,
-		HUD_CHAR_SIZE
 	),
 	// STATE_VERT_UV
-	sf::Text("\n",hudFont,HUD_CHAR_SIZE),
+	HUD_TEXT("\n"),
 	// STATE_VERT_COLOR
-	sf::Text("\n",hudFont,HUD_CHAR_SIZE),
+	HUD_TEXT("\n"),
 	// STATE_VERT_BONE
-	sf::Text("\n",hudFont,HUD_CHAR_SIZE),
+	HUD_TEXT("\n"),
 	// STATE_LAYERS
-	sf::Text(
+	HUD_TEXT(
 		"alt+a+up:    add layer above current\n"
 		"alt+a+down:  add layer below current\n"
 		"alt+d:       delete current layer\n"
-		,
-		hudFont,
-		HUD_CHAR_SIZE
 	),
 	// STATE_BONES
-	sf::Text("\n",hudFont,HUD_CHAR_SIZE),
+	HUD_TEXT("\n"),
 	// STATE_POSE
-	sf::Text("\n",hudFont,HUD_CHAR_SIZE),
+	HUD_TEXT("\n"),
 	// STATE_CONSOLE
-	sf::Text("\n",hudFont,HUD_CHAR_SIZE)
+	HUD_TEXT("\n")
 };
 
-sf::Text hudTextSnap = sf::Text("*",hudFont,HUD_CHAR_SIZE);
+sf::Text hudTextSnap = HUD_TEXT("*");
 
 sf::Text hudTextTris[3] = {
-	sf::Text("|>",hudFont,HUD_CHAR_SIZE),
-	sf::Text("|)",hudFont,HUD_CHAR_SIZE),
-	sf::Text("|(",hudFont,HUD_CHAR_SIZE)
+	HUD_TEXT("|>"),
+	HUD_TEXT("|)"),
+	HUD_TEXT("|(")
 };
 
-sf::Text hudTextLayersTitle = sf::Text("Layers",hudFont,HUD_CHAR_SIZE);
+sf::Text hudTextLayersTitle = HUD_TEXT("Layers");
 
 // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -368,8 +350,8 @@ namespace graphics{
 			return false;
 		}
 		
-		charWidth = hudFont.getGlyph('_',HUD_CHAR_SIZE,false,0.0).bounds.width + hudText.getLetterSpacing();
-		charHeight = (float)hudFont.getLineSpacing(HUD_CHAR_SIZE) * hudText.getLineSpacing();
+		charWidth = hudFont.getGlyph('_',HUD_CHAR_SIZE,false,0.0).bounds.width + HUD_TEXT("").getLetterSpacing();
+		charHeight = (float)hudFont.getLineSpacing(HUD_CHAR_SIZE) * HUD_TEXT("").getLineSpacing();
 		charVDiff = charHeight - HUD_CHAR_SIZE;
 		
 		mesherHelpTitleUnderline.setStyle(sf::Text::Underlined);
@@ -703,10 +685,9 @@ namespace hud{
 		target->draw(hudBack);
 		
 		// Text
-		hudText.setString(std::string(line));
-		hudText.setPosition(charPosition(cBL,2.0,1.5));
-		hudText.setFillColor(sf::Color(0xffffffff));
-		target->draw(hudText);
+		HUD_TEXT_INIT(hudTextLine,std::string(line));
+		hudTextLine.setPosition(charPosition(cBL,2.0,1.5));
+		target->draw(hudTextLine);
 		
 		// Snap state
 		if(snapOn){
@@ -769,18 +750,18 @@ namespace hud{
 				(currI == currLayer && altCurrLayerName != NULL) ? altCurrLayerName : (*it)->nameGet()
 			);
 			
-			hudText.setString(std::string(textBuffer));
-			hudText.setPosition(charPosition(cTR,4.0 + LAYER_NAME_STRLEN,1.0 + ((int)layers.size() - (int)currI)));
+			HUD_TEXT_INIT(hudTextLayerName,std::string(textBuffer));
+			hudTextLayerName.setPosition(charPosition(cTR,4.0 + LAYER_NAME_STRLEN,1.0 + ((int)layers.size() - (int)currI)));
 			
 			if(currI == currLayer){
-				hudText.setFillColor(sf::Color(0x000000ff));
+				hudTextLayerName.setFillColor(sf::Color(0x000000ff));
 			}else if((*it)->visible()){
-				hudText.setFillColor(sf::Color(0xffffffff));
+				hudTextLayerName.setFillColor(sf::Color(0xffffffff));
 			}else{
-				hudText.setFillColor(sf::Color(0xffffff70));
+				hudTextLayerName.setFillColor(sf::Color(0xffffff70));
 			}
 			
-			target->draw(hudText);
+			target->draw(hudTextLayerName);
 			
 			++currI;
 		}
@@ -791,16 +772,16 @@ namespace hud{
 			sprintf(textBuffer,"#grid: %s",altGridDisplay);
 		}
 		
-		hudText.setString(std::string(textBuffer));
-		hudText.setPosition(charPosition(cTR,4.0 + LAYER_NAME_STRLEN,2.5 + layers.size()));
+		HUD_TEXT_INIT(hudTextGridDisplay,std::string(textBuffer));
+		hudTextGridDisplay.setPosition(charPosition(cTR,4.0 + LAYER_NAME_STRLEN,2.5 + layers.size()));
 		
 		if(grid->visible()){
-			hudText.setFillColor(sf::Color(0xffffffff));
+			hudTextGridDisplay.setFillColor(sf::Color(0xffffffff));
 		}else{
-			hudText.setFillColor(sf::Color(0xffffff70));
+			hudTextGridDisplay.setFillColor(sf::Color(0xffffff70));
 		}
 		
-		target->draw(hudText);
+		target->draw(hudTextGridDisplay);
 	}
 	
 	void drawCustomColorsRef(unsigned char currColor,const char *altCurrColorHex){
@@ -857,25 +838,23 @@ namespace hud{
 					sprintf(textBuffer,"%08x",clrCstm::get(i));
 				}
 				
-				hudText.setString(std::string(textBuffer));
-				hudText.setPosition(charPosition(cBR,COLREF_ICX(i) + 9,COLREF_ICY(i)));
-				hudText.setFillColor(sf::Color(0xffffffff));
-				target->draw(hudText);
+				HUD_TEXT_INIT(hudTextColorHex,std::string(textBuffer));
+				hudTextColorHex.setPosition(charPosition(cBR,COLREF_ICX(i) + 9,COLREF_ICY(i)));
+				target->draw(hudTextColorHex);
 				
 				sprintf(textBuffer,"%2d",i);
 				
-				hudText.setString(std::string(textBuffer));
-				hudText.setPosition(charPosition(cBR,COLREF_ICX(i) + 14,COLREF_ICY(i)));
-				hudText.setFillColor(sf::Color(0x000000ff));
-				target->draw(hudText);
+				HUD_TEXT_INIT(hudTextColorID,std::string(textBuffer));
+				hudTextColorID.setPosition(charPosition(cBR,COLREF_ICX(i) + 14,COLREF_ICY(i)));
+				hudTextColorID.setFillColor(sf::Color(0x000000ff));
+				target->draw(hudTextColorID);
 				
 			}else{
 				sprintf(textBuffer,"%2d   %08x",i,clrCstm::get(i));
 				
-				hudText.setString(std::string(textBuffer));
-				hudText.setPosition(charPosition(cBR,COLREF_ICX(i) + 14,COLREF_ICY(i)));
-				hudText.setFillColor(sf::Color(0xffffffff));
-				target->draw(hudText);
+				HUD_TEXT_INIT(hudTextColorHexID,std::string(textBuffer));
+				hudTextColorHexID.setPosition(charPosition(cBR,COLREF_ICX(i) + 14,COLREF_ICY(i)));
+				target->draw(hudTextColorHexID);
 			}
 			
 			// Mark
@@ -928,10 +907,10 @@ namespace hud{
 			// Bone ID
 			sprintf(textBuffer,"%2d",i);
 			
-			hudText.setString(std::string(textBuffer));
-			hudText.setPosition(charPosition(cBR,VBNEREF_ICX(i) + 5,VBNEREF_ICY(i)));
-			hudText.setFillColor(sf::Color(i == currI ? 0x000000ff : 0xffffffff));
-			target->draw(hudText);
+			HUD_TEXT_INIT(hudTextBoneID,std::string(textBuffer));
+			hudTextBoneID.setPosition(charPosition(cBR,VBNEREF_ICX(i) + 5,VBNEREF_ICY(i)));
+			hudTextBoneID.setFillColor(sf::Color(i == currI ? 0x000000ff : 0xffffffff));
+			target->draw(hudTextBoneID);
 			
 			// Mark
 			drawn = marks[markShape(i)];
@@ -983,10 +962,10 @@ namespace hud{
 			// Bone ID
 			sprintf(textBuffer,"%2d",i);
 			
-			hudText.setString(std::string(textBuffer));
-			hudText.setPosition(charPosition(cBR,BNEREF_ICX(i) + 9,BNEREF_ICY(i)));
-			hudText.setFillColor(sf::Color(i == currI ? 0x000000ff : 0xffffffff));
-			target->draw(hudText);
+			HUD_TEXT_INIT(hudTextBoneID,std::string(textBuffer));
+			hudTextBoneID.setPosition(charPosition(cBR,BNEREF_ICX(i) + 9,BNEREF_ICY(i)));
+			hudTextBoneID.setFillColor(sf::Color(i == currI ? 0x000000ff : 0xffffffff));
+			target->draw(hudTextBoneID);
 			
 			// Bone Parent
 			if(i == currI && altCurrBoneParent != NULL){
@@ -999,10 +978,9 @@ namespace hud{
 				}
 			}
 			
-			hudText.setString(std::string(textBuffer));
-			hudText.setPosition(charPosition(cBR,BNEREF_ICX(i) + 4,BNEREF_ICY(i)));
-			hudText.setFillColor(sf::Color(0xffffffff));
-			target->draw(hudText);
+			HUD_TEXT_INIT(hudTextBoneParent,std::string(textBuffer));
+			hudTextBoneParent.setPosition(charPosition(cBR,BNEREF_ICX(i) + 4,BNEREF_ICY(i)));
+			target->draw(hudTextBoneParent);
 			
 			// Mark
 			drawn = marks[markShape(i)];
