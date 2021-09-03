@@ -1,7 +1,8 @@
 #ifndef LAYER_INCLUDED
 	#include <cstdint>
-	
 	#include <vector>
+	
+	#include <SFML/System.hpp>
 	
 	extern "C" {
 		#include <vecGL/vecTris.h>
