@@ -140,8 +140,9 @@
 			void nearVert_SetColor(unsigned char color);
 			void nearVert_SetBone(unsigned char bone);
 			
+			void nearTri_Delete();
+			
 			void tris_Add(int16_t x0,int16_t y0,int16_t x1,int16_t y1,int16_t x2,int16_t y2,unsigned char type);
-			// void tris_DeleteSelected();
 	};
 	
 	class gridLayer: public layer{

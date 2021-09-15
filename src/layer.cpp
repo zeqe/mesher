@@ -620,6 +620,32 @@ void vertLayer::nearVert_SetBone(unsigned char bone){
 	modified = true;
 }
 
+void vertLayer::nearTri_Delete(){
+	if(!NEARTRI_VALID()){
+		return;
+	}
+	
+	// Copying triangle from the end to nearest triangle, effectively replacing it
+	--buffer.count;
+	
+	copyTri(&buffer,buffer.count,&buffer,nearTri);
+	
+	// Updating vertex selections
+	for(unsigned int i = 0;i < TRI_VERT_COUNT;++i){
+		if(selVerts[TRI_V(nearTri,i)]){
+			--selVertCount;
+		}
+		
+		selVerts[TRI_V(nearTri,i)] = selVerts[TRI_V(buffer.count,i)];
+	}
+	
+	// Updating state
+	modified = true;
+	
+	// Copying over the last triangle may have invalidated indices
+	nearestPoint_Clear();
+}
+
 void vertLayer::tris_Add(int16_t x0,int16_t y0,int16_t x1,int16_t y1,int16_t x2,int16_t y2,unsigned char type){
 	if(buffer.count >= maxTris){
 		return;
@@ -656,47 +682,6 @@ void vertLayer::tris_Add(int16_t x0,int16_t y0,int16_t x1,int16_t y1,int16_t x2,
 	++buffer.count;
 	modified = true;
 }
-
-/*void vertLayer::tris_DeleteSelected(){
-	if(!NEARVERT_VALID()){
-		return;
-	}
-	
-	if(!selTris[nearTri]){
-		return;
-	}
-	
-	selVertCount = 0;
-	
-	// Removing selected triangles
-	unsigned int curr = 0;
-	
-	for(unsigned int i = 0;i < buffer.count;++i){
-		// Copy over if not selected, essentially skipping selected ones for overwriting / non-counting
-		if(!selTris[i]){
-			if(i != curr){
-				copyTri(&buffer,i,&buffer,curr);
-				
-				selVerts[TRI_V(curr,0)] = selVerts[TRI_V(i,0)];
-				selVerts[TRI_V(curr,1)] = selVerts[TRI_V(i,1)];
-				selVerts[TRI_V(curr,2)] = selVerts[TRI_V(i,2)];
-				
-				selTris[curr] = selTris[i];
-				
-				selVertCount += (selVerts[TRI_V(curr,0)] > 0) + (selVerts[TRI_V(curr,1)] > 0) + (selVerts[TRI_V(curr,2)] > 0);
-			}
-			
-			++curr;
-		}
-	}
-	
-	// Updating state
-	buffer.count = curr;
-	modified = true;
-	
-	// Copying over triangles by index will have invalidated old indices
-	nearestPoint_Clear();
-}*/
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 // Grid Layer ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------

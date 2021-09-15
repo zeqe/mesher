@@ -727,6 +727,13 @@ int main(){
 											triCn::considerPoint(iX,iY);
 											
 											state::set(STATE_ATOP_TRI_ADD);
+										}else if(sf::Keyboard::isKeyPressed(sf::Keyboard::D)){
+											if(!currLayerValid()){
+												break;
+											}
+											
+											layers[currLayer]->nearTri_Delete();
+											
 										}else if(sf::Keyboard::isKeyPressed(sf::Keyboard::T)){
 											if(trOp::init(TROP_TRANSLATE,iX,iY)){
 												state::set(STATE_ATOP_TRANSFORM_XY);
