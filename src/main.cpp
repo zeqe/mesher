@@ -221,7 +221,7 @@ int main(){
 	enum keyInput keyIn;
 	int statelessKI;
 	
-	bool selState;
+	bool selState,selActive = false;
 	
 	sf::Vector2<int32_t> tempPos;
 	
@@ -506,10 +506,6 @@ int main(){
 								newLayer->nameSet("layer");
 								newLayer->vertModifiers_Set((&trOp::apply),(&trOp::dirty));
 								
-								for(int i = 0;i < 2;++i){
-									newLayer->tris_Add(randI(),randI(),randI(),randI(),randI(),randI(),TRI_TYPE_FULL);
-								}
-								
 								if(layers.empty()){
 									layers.insert(layers.begin(),newLayer);
 									currLayer = 0;
@@ -749,6 +745,7 @@ int main(){
 										}
 									}else{
 										if(currLayerValid()){
+											selActive = true;
 											selState = layers[currLayer]->selectVert_Nearest(true,true);
 										}
 									}
@@ -955,7 +952,9 @@ int main(){
 					if(sf::Mouse::isButtonPressed(sf::Mouse::Left) && currLayerValid()){
 						switch(state::get()){
 							case STATE_VERT_XY:
-								layers[currLayer]->selectVert_Nearest(false,selState);
+								if(selActive){
+									layers[currLayer]->selectVert_Nearest(false,selState);
+								}
 								
 								break;
 							case STATE_VERT_COLOR:
@@ -974,6 +973,10 @@ int main(){
 					break;
 				case sf::Event::MouseButtonReleased:
 					switch(event.mouseButton.button){
+						case sf::Mouse::Left:
+							selActive = false;
+							
+							break;
 						case sf::Mouse::Right:
 							vw::panEnd();
 							

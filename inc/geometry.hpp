@@ -2,7 +2,7 @@
 	#include <cstdint>
 	
 	namespace geom{
-		int triArea(int x1,int y1,int x2,int y2,int x3,int y3);
+		int64_t triArea(int x1,int y1,int x2,int y2,int x3,int y3);
 		char pointInTri(int16_t x,int16_t y,int x1,int y1,int x2,int y2,int x3,int y3);
 		
 		uint64_t distSquared_I(int x0,int y0,int x1,int y1);
