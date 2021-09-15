@@ -20,11 +20,12 @@ namespace state{
 		switch(currState){
 			case STATE_VERT_XY:
 			case STATE_ATOP_TRI_ADD:
-			case STATE_ATOP_TRANSFORM:
+			case STATE_ATOP_TRANSFORM_XY:
 				currDrawState = D_STATE_XY;
 				
 				break;
 			case STATE_VERT_UV:
+			case STATE_ATOP_TRANSFORM_UV:
 				currDrawState = D_STATE_UV;
 				
 				break;
@@ -49,7 +50,7 @@ namespace state{
 				
 				break;
 			case STATE_POSE:
-			case STATE_ATOP_POSE_TRANSFORM:
+			case STATE_ATOP_TRANSFORM_POSE:
 				currDrawState = D_STATE_POSE;
 				
 				break;

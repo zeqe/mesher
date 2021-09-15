@@ -141,6 +141,16 @@ int16_t norm16_UtoS(uint16_t val){
 	return (int16_t)((int32_t)val + (int32_t)INT16_MIN);
 }
 
+int16_t norm32_bounded16(int32_t val){
+	if(val < INT16_MIN){
+		return INT16_MIN;
+	}else if(val > INT16_MAX){
+		return INT16_MAX;
+	}
+	
+	return val;
+}
+
 // Utility Methods -------------------------------------------------------------------------------------------------------------------------------------------
 void vertLayer::init(unsigned int maxTriCount){
 	// Parameters
@@ -273,6 +283,40 @@ sf::Vector2<int32_t> vertLayer::modedVertPosition(unsigned int i){
 	return vP;
 }
 
+void vertLayer::vertModifiers_ApplyTo(struct vecTrisBuf *vertModified){
+	if(!vertModifiers_Applicable()){
+		return;
+	}
+	
+	// Apply modifier according to global state
+	switch(state::get()){
+		case STATE_ATOP_TRANSFORM_XY:
+			for(unsigned int i = 0;i < vertModified->count * TRI_VERT_COUNT;++i){
+				if(selVerts[i]){
+					(*vertModifier)(&(VERT_X(vertModified,i)),&(VERT_Y(vertModified,i)));
+				}
+			}
+			
+			break;
+		case STATE_ATOP_TRANSFORM_UV:
+			for(unsigned int i = 0;i < vertModified->count * TRI_VERT_COUNT;++i){
+				if(selVerts[i]){
+					int16_t nU = norm16_UtoS(VERT_U(vertModified,i));
+					int16_t nV = norm16_UtoS(VERT_V(vertModified,i));
+					
+					(*vertModifier)(&nU,&nV);
+					
+					VERT_U(vertModified,i) = norm16_StoU(nU);
+					VERT_V(vertModified,i) = norm16_StoU(nV);
+				}
+			}
+			
+			break;
+		default:
+			break;
+	}
+}
+
 // General Globals -------------------------------------------------------------------------------------------------------------------------------------------
 vertLayer::vertLayer(unsigned int maxTriCount){
 	init(maxTriCount);
@@ -297,20 +341,15 @@ bool vertLayer::vertModifiers_Applicable(){
 }
 
 void vertLayer::vertModifiers_Apply(){
-	if(!vertModifiers_Applicable()){
-		return;
-	}
-	
-	// Apply modifier
-	for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
-		if(selVerts[i]){
-			(*vertModifier)(&(VERT_X(&buffer,i)),&(VERT_Y(&buffer,i)));
-		}
-	}
+	vertModifiers_ApplyTo(&buffer);
 }
 
 // Inherited -------------------------------------------------------------------------------------------------------------------------------------------
 bool vertLayer::nearestPoint_Find(unsigned int radius){
+	return nearestPoint_Find(radius,0);
+}
+
+bool vertLayer::nearestPoint_Find(unsigned int radius,unsigned char currBone){
 	nearestPoint_Clear();
 	
 	if(!visible()){
@@ -332,8 +371,13 @@ bool vertLayer::nearestPoint_Find(unsigned int radius){
 		
 		// Perform closest-vertex search
 		for(unsigned int j = 0;j < TRI_VERT_COUNT;++j){
-			// Skip selected vertices amid modification
-			if(vertModifiers_Applicable() && selVerts[i]){
+			// Skip vertices amid modification
+			if(
+				(*vertModifierEnabled)() && (
+					(renderVertMode() != VERT_MODE_POSE_XY && vertModifiers_Applicable() && selVerts[i]) ||
+					(renderVertMode() == VERT_MODE_POSE_XY && VERT_BONE(&buffer,TRI_V(i,j)) == currBone)
+				)
+			){
 				continue;
 			}
 			
@@ -381,11 +425,11 @@ void vertLayer::nearestPoint_Clear(){
 }
 
 int16_t vertLayer::nearestPoint_X(){
-	return VERT_X(&buffer,nearVert);
+	return norm32_bounded16(neighborVerts[neighborCurrent * 2 + 0]);
 }
 
 int16_t vertLayer::nearestPoint_Y(){
-	return VERT_Y(&buffer,nearVert);
+	return norm32_bounded16(neighborVerts[neighborCurrent * 2 + 1]);
 }
 
 class vertLayer *vertLayer::withNearestPoint(std::vector<class vertLayer *> &layers){
@@ -440,11 +484,7 @@ void vertLayer::draw(unsigned char currBone,bool wireframe,bool showNearestPoint
 		
 		// Applying modifiers if needed
 		if(vertModifiers_Applicable()){
-			for(unsigned int i = 0;i < buffer.count * TRI_VERT_COUNT;++i){
-				if(selVerts[i]){
-					(*vertModifier)(&(VERT_X(&disp,i)),&(VERT_Y(&disp,i)));
-				}
-			}
+			vertModifiers_ApplyTo(&disp);
 		}
 		
 		// Set vertex colors if applicable

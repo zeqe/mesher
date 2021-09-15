@@ -102,6 +102,7 @@
 			unsigned int renderClrPfl();
 			
 			sf::Vector2<int32_t> modedVertPosition(unsigned int i);
+			void vertModifiers_ApplyTo(struct vecTrisBuf *vertModified);
 			
 		public:
 			// General Globals ---------------------
@@ -117,6 +118,8 @@
 			
 			// Inherited ---------------------
 			bool nearestPoint_Find(unsigned int radius);
+			bool nearestPoint_Find(unsigned int radius,unsigned char currBone);
+			
 			bool nearestPoint_Found();
 			void nearestPoint_Clear();
 			

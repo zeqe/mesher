@@ -206,7 +206,7 @@ int main(){
 	
 	bool snap = false,wireframe = false;
 	class layer *nearestLayer = NULL;
-	int16_t iX,iY,mX,mY;
+	int16_t iX = 0,iY = 0,mX = 0,mY = 0;
 	
 	unsigned char triType = 0;
 	triCn::setType(triType);
@@ -241,7 +241,7 @@ int main(){
 		window.clear();
 		
 		// Content render
-		if(state::get() == STATE_VERT_UV){
+		if(state::getDraw() == D_STATE_UV){
 			render::tex::draw();
 		}else{
 			hud::ref::draw();
@@ -265,7 +265,7 @@ int main(){
 		
 		if(state::get() == STATE_BONES || state::get() == STATE_ATOP_BONE_PARENT_SET){
 			bones::draw();
-		}else if(state::get() == STATE_POSE || state::get() == STATE_ATOP_POSE_TRANSFORM){
+		}else if(state::get() == STATE_POSE || state::get() == STATE_ATOP_TRANSFORM_POSE){
 			pose::draw();
 		}
 		
@@ -387,6 +387,10 @@ int main(){
 								
 								state::set(newState);
 								
+								for(std::vector<class vertLayer *>::iterator it = layers.begin();it != layers.end();++it){
+									(*it)->nearestPoint_Clear();
+								}
+								
 								break;
 							default:
 								break;
@@ -459,12 +463,14 @@ int main(){
 					
 					switch(STATED_KI(state::get(),isCtrlDown,isAltDown,isShiftDown,keyIn)){
 						case STATED_KI(STATE_VERT_XY,0,0,1,KEY_A):
+						case STATED_KI(STATE_VERT_UV,0,0,1,KEY_A):
 							if(currLayerValid()){
 								layers[currLayer]->selectVert_All();
 							}
 							
 							break;
 						case STATED_KI(STATE_VERT_XY,0,0,1,KEY_C):
+						case STATED_KI(STATE_VERT_UV,0,0,1,KEY_C):
 							if(currLayerValid()){
 								layers[currLayer]->selectVert_Clear();
 							}
@@ -567,7 +573,7 @@ int main(){
 							triCn::setType(triType);
 							
 							break;
-						case STATED_KI(STATE_ATOP_TRANSFORM,0,0,0,KEY_ESC):
+						case STATED_KI(STATE_ATOP_TRANSFORM_XY,0,0,0,KEY_ESC):
 							trOp::exit();
 							state::set(STATE_VERT_XY);
 							
@@ -588,7 +594,7 @@ int main(){
 							state::set(STATE_BONES);
 							
 							break;
-						case STATED_KI(STATE_ATOP_POSE_TRANSFORM,0,0,0,KEY_ESC):
+						case STATED_KI(STATE_ATOP_TRANSFORM_POSE,0,0,0,KEY_ESC):
 							trOp::exit();
 							pose::clearUnappliedModifiers();
 							
@@ -723,15 +729,37 @@ int main(){
 											state::set(STATE_ATOP_TRI_ADD);
 										}else if(sf::Keyboard::isKeyPressed(sf::Keyboard::T)){
 											if(trOp::init(TROP_TRANSLATE,iX,iY)){
-												state::set(STATE_ATOP_TRANSFORM);
+												state::set(STATE_ATOP_TRANSFORM_XY);
 											}
 										}else if(sf::Keyboard::isKeyPressed(sf::Keyboard::R)){
 											if(trOp::init(TROP_ROTATE,iX,iY)){
-												state::set(STATE_ATOP_TRANSFORM);
+												state::set(STATE_ATOP_TRANSFORM_XY);
 											}
 										}else if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)){
 											if(trOp::init(TROP_SCALE,iX,iY)){
-												state::set(STATE_ATOP_TRANSFORM);
+												state::set(STATE_ATOP_TRANSFORM_XY);
+											}
+										}
+									}else{
+										if(currLayerValid()){
+											selState = layers[currLayer]->selectVert_Nearest(true,true);
+										}
+									}
+									
+									break;
+								case STATE_VERT_UV:
+									if(isAltDown){
+										if(sf::Keyboard::isKeyPressed(sf::Keyboard::T)){
+											if(trOp::init(TROP_TRANSLATE,iX,iY)){
+												state::set(STATE_ATOP_TRANSFORM_UV);
+											}
+										}else if(sf::Keyboard::isKeyPressed(sf::Keyboard::R)){
+											if(trOp::init(TROP_ROTATE,iX,iY)){
+												state::set(STATE_ATOP_TRANSFORM_UV);
+											}
+										}else if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)){
+											if(trOp::init(TROP_SCALE,iX,iY)){
+												state::set(STATE_ATOP_TRANSFORM_UV);
 											}
 										}
 									}else{
@@ -767,15 +795,15 @@ int main(){
 										
 										if(sf::Keyboard::isKeyPressed(sf::Keyboard::T)){
 											if(trOp::init(TROP_TRANSLATE,iX,iY)){
-												state::set(STATE_ATOP_POSE_TRANSFORM);
+												state::set(STATE_ATOP_TRANSFORM_POSE);
 											}
 										}else if(sf::Keyboard::isKeyPressed(sf::Keyboard::R)){
 											if(trOp::init(TROP_ROTATE,tempPos.x,tempPos.y)){
-												state::set(STATE_ATOP_POSE_TRANSFORM);
+												state::set(STATE_ATOP_TRANSFORM_POSE);
 											}
 										}else if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)){
 											if(trOp::init(TROP_SCALE,tempPos.x,tempPos.y)){
-												state::set(STATE_ATOP_POSE_TRANSFORM);
+												state::set(STATE_ATOP_TRANSFORM_POSE);
 											}
 										}
 									}
@@ -789,7 +817,7 @@ int main(){
 									}
 									
 									break;
-								case STATE_ATOP_TRANSFORM:
+								case STATE_ATOP_TRANSFORM_XY:
 									switch(trOp::currentState()){
 										case TROP_STATE_PRIME:
 											trOp::prime(iX,iY);
@@ -811,7 +839,29 @@ int main(){
 									}
 									
 									break;
-								case STATE_ATOP_POSE_TRANSFORM:
+								case STATE_ATOP_TRANSFORM_UV:
+									switch(trOp::currentState()){
+										case TROP_STATE_PRIME:
+											trOp::prime(iX,iY);
+											
+											break;
+										case TROP_STATE_UPDATE:
+											for(std::vector<class vertLayer *>::iterator it = layers.begin();it != layers.end();++it){
+												(*it)->vertModifiers_Apply();
+											}
+											
+											trOp::exit();
+											
+											state::set(STATE_VERT_UV);
+											
+											break;
+										case TROP_STATE_NONE:
+										default:
+											break;
+									}
+									
+									break;
+								case STATE_ATOP_TRANSFORM_POSE:
 									switch(trOp::currentState()){
 										case TROP_STATE_PRIME:
 											trOp::prime(iX,iY);
@@ -866,12 +916,12 @@ int main(){
 						grid.nearestPoint_Find(vw::seekRadius());
 						
 						for(std::vector<class vertLayer *>::iterator it = layers.begin();it != layers.end();++it){
-							(*it)->nearestPoint_Find(vw::seekRadius());
+							(*it)->nearestPoint_Find(vw::seekRadius(),currBone);
 						}
 						
 						nearestLayer = layer::withNearestPoint((class layer *)&grid,(class layer *)vertLayer::withNearestPoint(layers));
 					}else if(currLayerValid()){
-						layers[currLayer]->nearestPoint_Find(vw::seekRadius());
+						layers[currLayer]->nearestPoint_Find(vw::seekRadius(),currBone);
 					}
 					
 					if(nearestLayer != NULL){
@@ -890,7 +940,7 @@ int main(){
 					// Tranformation operation preview update
 					trOp::update(iX,iY);
 					
-					if(state::get() == STATE_ATOP_POSE_TRANSFORM && trOp::dirty()){
+					if(state::get() == STATE_ATOP_TRANSFORM_POSE && trOp::dirty()){
 						pose::updateModifiers(false,currBone);
 					}
 					

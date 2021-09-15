@@ -120,22 +120,23 @@ sf::Text mesherStateSymbols[STATE_COUNT] = {
 #define STATE_TITLE_MAX_LEN 18
 
 sf::Text mesherStateTitles[TOTAL_STATE_COUNT] = {
-	HUD_TEXT("Vertex XY"),		// STATE_VERT_XY
-	HUD_TEXT("Vertex UV"),		// STATE_VERT_UV
-	HUD_TEXT("Vertex Colour"),	// STATE_VERT_COLOR
-	HUD_TEXT("Vertex Bone"),	// STATE_VERT_BONE
-	HUD_TEXT("Layers"),			// STATE_LAYERS
-	HUD_TEXT("Bones"),			// STATE_BONES
-	HUD_TEXT("Pose"),			// STATE_POSE
-	HUD_TEXT("Console"),		// STATE_CONSOLE
-	HUD_TEXT("---"),			// STATE_COUNT
-	HUD_TEXT("<Add Tri>"),		// STATE_ATOP_TRI_ADD
-	HUD_TEXT("<Transform>"),	// STATE_ATOP_TRANSFORM
-	HUD_TEXT("<Color Set>"),	// STATE_ATOP_COLOR_SET
-	HUD_TEXT("<Grid Set>"),		// STATE_ATOP_GRID_SET
-	HUD_TEXT("<Layer Name>"),	// STATE_ATOP_LAYER_NAME
-	HUD_TEXT("<Parent Set>"),	// STATE_ATOP_BONE_PARENT_SET
-	HUD_TEXT("<Transform>")		// STATE_ATOP_POSE_TRANSFORM
+	HUD_TEXT("Vertex XY"),			// STATE_VERT_XY
+	HUD_TEXT("Vertex UV"),			// STATE_VERT_UV
+	HUD_TEXT("Vertex Colour"),		// STATE_VERT_COLOR
+	HUD_TEXT("Vertex Bone"),		// STATE_VERT_BONE
+	HUD_TEXT("Layers"),				// STATE_LAYERS
+	HUD_TEXT("Bones"),				// STATE_BONES
+	HUD_TEXT("Pose"),				// STATE_POSE
+	HUD_TEXT("Console"),			// STATE_CONSOLE
+	HUD_TEXT("---"),				// STATE_COUNT
+	HUD_TEXT("<Add Tri>"),			// STATE_ATOP_TRI_ADD
+	HUD_TEXT("<Transform XY>"),		// STATE_ATOP_TRANSFORM_XY
+	HUD_TEXT("<Transform UV>"),		// STATE_ATOP_TRANSFORM_UV
+	HUD_TEXT("<Color Set>"),		// STATE_ATOP_COLOR_SET
+	HUD_TEXT("<Grid Set>"),			// STATE_ATOP_GRID_SET
+	HUD_TEXT("<Layer Name>"),		// STATE_ATOP_LAYER_NAME
+	HUD_TEXT("<Parent Set>"),		// STATE_ATOP_BONE_PARENT_SET
+	HUD_TEXT("<Transform Pose>")	// STATE_ATOP_TRANSFORM_POSE
 };
 
 sf::Text mesherHelpTitleUnderline = HUD_TEXT(std::string(40,' '));
