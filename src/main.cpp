@@ -502,7 +502,7 @@ int main(){
 							}
 							
 							{
-								struct vertLayer *newLayer = new vertLayer(100,NULL);
+								struct vertLayer *newLayer = new vertLayer(100,NULL,NULL);
 								newLayer->nameSet("layer");
 								newLayer->vertModifiers_Set((&trOp::apply),(&trOp::dirty));
 								
@@ -665,18 +665,20 @@ int main(){
 										if(in == NULL){
 											sprintf(commandFeedback,"Unable to open \'%s\' for reading",commandStr);
 										}else{
-											struct vertLayer *newLayer = new vertLayer(100,in);
-											newLayer->nameSet(commandStr);
-											newLayer->vertModifiers_Set((&trOp::apply),(&trOp::dirty));
+											bool readSuccess;
+											struct vertLayer *newLayer = new vertLayer(100,in,&readSuccess);
 											
-											layers.insert(layers.begin() + currLayer,newLayer);
-											sprintf(commandFeedback,"Layer read from \'%s\'",commandStr);
-											
-											/*if(layers[currLayer]->writeLayer(out)){
-												sprintf(commandFeedback,"Layer written to \'%s\'",commandStr);
+											if(!readSuccess){
+												delete newLayer;
+												
+												sprintf(commandFeedback,"Error reading layer from \'%s\'",commandStr);
 											}else{
-												sprintf(commandFeedback,"Unable to write layer to \'%s\'",commandStr);
-											}*/
+												newLayer->nameSet(commandStr);
+												newLayer->vertModifiers_Set((&trOp::apply),(&trOp::dirty));
+												layers.insert(layers.begin() + currLayer,newLayer);
+												
+												sprintf(commandFeedback,"Layer read from \'%s\'",commandStr);
+											}
 											
 											fclose(in);
 										}

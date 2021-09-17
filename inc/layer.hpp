@@ -103,7 +103,7 @@
 			
 		public:
 			// General Globals ---------------------
-			vertLayer(unsigned int maxTriCount,FILE *in);
+			vertLayer(unsigned int maxTriCount,FILE *in,bool *readSuccess);
 			~vertLayer();
 			
 			enum layerType type();

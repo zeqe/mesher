@@ -180,18 +180,24 @@ bool vertLayer::init_ReadLayer(FILE *in){
 	disp.uv = new uint16_t[maxTris * TRI_UV_VALUE_COUNT];
 	disp.tbc = new uint8_t[maxTris * TRI_TBC_VALUE_COUNT];
 	
-	dispTris = NULL;
-	
 	modified = true;
 	
 	// Selections
+	bool success = true;
 	selVerts = new unsigned char[maxTris * TRI_VERT_COUNT];
-	memset(selVerts,0,maxTris * TRI_VERT_COUNT * sizeof(unsigned char));
 	
 	selVertCount = 0;
 	
+	for(unsigned int i = 0;success && i < buffer.count * TRI_VERT_COUNT;++i){
+		success = success && fIO::u8::read(selVerts + i,in);
+		
+		if(success && selVerts[i]){
+			++selVertCount;
+		}
+	}
+	
 	// Done
-	return true;
+	return success;
 }
 
 void vertLayer::init_Blank(unsigned int maxTriCount){
@@ -208,8 +214,6 @@ void vertLayer::init_Blank(unsigned int maxTriCount){
 	disp.xy = new int16_t[maxTris * TRI_XY_VALUE_COUNT];
 	disp.uv = new uint16_t[maxTris * TRI_UV_VALUE_COUNT];
 	disp.tbc = new uint8_t[maxTris * TRI_TBC_VALUE_COUNT];
-	
-	dispTris = NULL;
 	
 	modified = false;
 	
@@ -348,8 +352,11 @@ void vertLayer::vertModifiers_ApplyTo(struct vecTrisBuf *vertModified){
 }
 
 // General Globals -------------------------------------------------------------------------------------------------------------------------------------------
-vertLayer::vertLayer(unsigned int maxTriCount,FILE *in){
+vertLayer::vertLayer(unsigned int maxTriCount,FILE *in,bool *readSuccess){
 	// Default States ---------------------------------------------
+	// Buffer display
+	dispTris = NULL;
+	
 	// Draw State Tracking
 	lastDraw = state::getDraw();
 	lastBone = 0;
@@ -363,7 +370,8 @@ vertLayer::vertLayer(unsigned int maxTriCount,FILE *in){
 	nearTri = NO_NEAR_ELMNT;
 	
 	// Buffer & Selection -----------------------------------------
-	if(in == NULL || !init_ReadLayer(in)){
+	if(in == NULL || readSuccess == NULL || !(*readSuccess = init_ReadLayer(in))){
+		end();
 		init_Blank(maxTriCount);
 	}
 }
@@ -403,7 +411,19 @@ bool vertLayer::writeMesh(FILE *out){
 }
 
 bool vertLayer::writeLayer(FILE *out){
-	return writeMesh(out);
+	// Buffer
+	if(!writeMesh(out)){
+		return false;
+	}
+	
+	// Selection
+	bool success = true;
+	
+	for(unsigned int i = 0;success && i < buffer.count * TRI_VERT_COUNT;++i){
+		success = success && fIO::u8::write(selVerts[i],out);
+	}
+	
+	return success;
 }
 
 
