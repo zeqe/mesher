@@ -3,8 +3,6 @@
 #include <cstring>
 #include <cfloat>
 
-#include <iostream>
-
 #include "view.hpp"
 #include "layer.hpp"
 #include "geometry.hpp"
@@ -12,6 +10,7 @@
 #include "colorsCustom.hpp"
 #include "graphics.hpp"
 #include "skeleton.hpp"
+#include "fileIO.hpp"
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 // Layer ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -105,32 +104,12 @@ class layer *layer::withNearestPoint(std::vector<class layer *> &layers){
 
 #define NO_NEAR_ELMNT (UINT_MAX)
 
-unsigned int vertLayer::BUFF_XY_COUNT(){
-	return maxTris * TRI_XY_VALUE_COUNT;
-}
-
-unsigned int vertLayer::BUFF_UV_COUNT(){
-	return maxTris * TRI_UV_VALUE_COUNT;
-}
-
-unsigned int vertLayer::BUFF_TBC_COUNT(){
-	return maxTris * TRI_TBC_VALUE_COUNT;
-}
-
 bool vertLayer::NEARVERT_VALID(){
 	return nearVert < buffer.count * TRI_VERT_COUNT;
 }
 
 bool vertLayer::NEARTRI_VALID(){
 	return nearTri < buffer.count;
-}
-
-unsigned int vertLayer::SEL_VERTS_COUNT(){
-	return maxTris * TRI_VERT_COUNT;
-}
-
-unsigned int vertLayer::SEL_TRIS_COUNT(){
-	return maxTris;
 }
 
 uint16_t norm16_StoU(int16_t val){
@@ -152,40 +131,91 @@ int16_t norm32_bounded16(int32_t val){
 }
 
 // Utility Methods -------------------------------------------------------------------------------------------------------------------------------------------
-void vertLayer::init(unsigned int maxTriCount){
+bool vertLayer::readMesh(FILE *in){
+	bool success = true,iSuccess;
+	
+	if(!fIO::u16::read(&(buffer.count),in)){
+		return false;
+	}
+	
+	buffer.xy = new int16_t[buffer.count * TRI_XY_VALUE_COUNT];
+	buffer.uv = new uint16_t[buffer.count * TRI_UV_VALUE_COUNT];
+	buffer.tbc = new uint8_t[buffer.count * TRI_TBC_VALUE_COUNT];
+	
+	for(unsigned int i = 0;success && i < buffer.count * TRI_VERT_COUNT;++i){
+		iSuccess = fIO::s16::read(&(VERT_X(&buffer,i)),in) && fIO::s16::read(&(VERT_Y(&buffer,i)),in);
+		success = success && iSuccess;
+	}
+	
+	for(unsigned int i = 0;success && i < buffer.count * TRI_VERT_COUNT;++i){
+		iSuccess = fIO::u16::read(&(VERT_U(&buffer,i)),in) && fIO::u16::read(&(VERT_V(&buffer,i)),in);
+		success = success && iSuccess;
+	}
+	
+	for(unsigned int i = 0;success && i < buffer.count * TRI_VERT_COUNT;++i){
+		iSuccess = fIO::u8::read(&(VERT_TYPE(&buffer,i)),in) && fIO::u8::read(&(VERT_BONE(&buffer,i)),in) && fIO::u8::read(&(VERT_COLOR(&buffer,i)),in);
+		success = success && iSuccess;
+	}
+	
+	if(!success){
+		delete[] buffer.xy;
+		delete[] buffer.uv;
+		delete[] buffer.tbc;
+	}
+	
+	return success;
+}
+
+bool vertLayer::init_ReadLayer(FILE *in){
+	if(!readMesh(in)){
+		return false;
+	}
+	
+	// Parameters
+	maxTris = buffer.count;
+	
+	// Buffers
+	disp.count = buffer.count;
+	disp.xy = new int16_t[maxTris * TRI_XY_VALUE_COUNT];
+	disp.uv = new uint16_t[maxTris * TRI_UV_VALUE_COUNT];
+	disp.tbc = new uint8_t[maxTris * TRI_TBC_VALUE_COUNT];
+	
+	dispTris = NULL;
+	
+	modified = true;
+	
+	// Selections
+	selVerts = new unsigned char[maxTris * TRI_VERT_COUNT];
+	memset(selVerts,0,maxTris * TRI_VERT_COUNT * sizeof(unsigned char));
+	
+	selVertCount = 0;
+	
+	// Done
+	return true;
+}
+
+void vertLayer::init_Blank(unsigned int maxTriCount){
 	// Parameters
 	maxTris = maxTriCount;
 	
 	// Buffers
 	buffer.count = 0;
-	buffer.xy = new int16_t[BUFF_XY_COUNT()];
-	buffer.uv = new uint16_t[BUFF_UV_COUNT()];
-	buffer.tbc = new uint8_t[BUFF_TBC_COUNT()];
+	buffer.xy = new int16_t[maxTris * TRI_XY_VALUE_COUNT];
+	buffer.uv = new uint16_t[maxTris * TRI_UV_VALUE_COUNT];
+	buffer.tbc = new uint8_t[maxTris * TRI_TBC_VALUE_COUNT];
 	
 	disp.count = 0;
-	disp.xy = new int16_t[BUFF_XY_COUNT()];
-	disp.uv = new uint16_t[BUFF_UV_COUNT()];
-	disp.tbc = new uint8_t[BUFF_TBC_COUNT()];
+	disp.xy = new int16_t[maxTris * TRI_XY_VALUE_COUNT];
+	disp.uv = new uint16_t[maxTris * TRI_UV_VALUE_COUNT];
+	disp.tbc = new uint8_t[maxTris * TRI_TBC_VALUE_COUNT];
 	
 	dispTris = NULL;
 	
 	modified = false;
 	
-	// Draw State Tracking
-	lastDraw = state::getDraw();
-	lastBone = 0;
-	
-	// Vertex Modifiers
-	vertModifier = NULL;
-	vertModifierEnabled = NULL;
-	
-	// Near elements
-	nearVert = NO_NEAR_ELMNT;
-	nearTri = NO_NEAR_ELMNT;
-	
 	// Selections
-	selVerts = new unsigned char[SEL_VERTS_COUNT()];
-	memset(selVerts,0,SEL_VERTS_COUNT() * sizeof(unsigned char));
+	selVerts = new unsigned char[maxTris * TRI_VERT_COUNT];
+	memset(selVerts,0,maxTris * TRI_VERT_COUNT * sizeof(unsigned char));
 	
 	selVertCount = 0;
 }
@@ -318,8 +348,24 @@ void vertLayer::vertModifiers_ApplyTo(struct vecTrisBuf *vertModified){
 }
 
 // General Globals -------------------------------------------------------------------------------------------------------------------------------------------
-vertLayer::vertLayer(unsigned int maxTriCount){
-	init(maxTriCount);
+vertLayer::vertLayer(unsigned int maxTriCount,FILE *in){
+	// Default States ---------------------------------------------
+	// Draw State Tracking
+	lastDraw = state::getDraw();
+	lastBone = 0;
+	
+	// Vertex Modifiers
+	vertModifier = NULL;
+	vertModifierEnabled = NULL;
+	
+	// Near elements
+	nearVert = NO_NEAR_ELMNT;
+	nearTri = NO_NEAR_ELMNT;
+	
+	// Buffer & Selection -----------------------------------------
+	if(in == NULL || !init_ReadLayer(in)){
+		init_Blank(maxTriCount);
+	}
 }
 
 vertLayer::~vertLayer(){
@@ -329,6 +375,37 @@ vertLayer::~vertLayer(){
 enum layerType vertLayer::type(){
 	return LAYER_VERT;
 }
+
+// Output ---------------------------------------------------------------------------------------------------------------------------------------------------------
+bool vertLayer::writeMesh(FILE *out){
+	bool success = true,iSuccess;
+	
+	if(!fIO::u16::write(buffer.count,out)){
+		return false;
+	}
+	
+	for(unsigned int i = 0;success && i < buffer.count * TRI_VERT_COUNT;++i){
+		iSuccess = fIO::s16::write(VERT_X(&buffer,i),out) && fIO::s16::write(VERT_Y(&buffer,i),out);
+		success = success && iSuccess;
+	}
+	
+	for(unsigned int i = 0;success && i < buffer.count * TRI_VERT_COUNT;++i){
+		iSuccess = fIO::u16::write(VERT_U(&buffer,i),out) && fIO::u16::write(VERT_V(&buffer,i),out);
+		success = success && iSuccess;
+	}
+	
+	for(unsigned int i = 0;success && i < buffer.count * TRI_VERT_COUNT;++i){
+		iSuccess = fIO::u8::write(VERT_TYPE(&buffer,i),out) && fIO::u8::write(VERT_BONE(&buffer,i),out) && fIO::u8::write(VERT_COLOR(&buffer,i),out);
+		success = success && iSuccess;
+	}
+	
+	return success;
+}
+
+bool vertLayer::writeLayer(FILE *out){
+	return writeMesh(out);
+}
+
 
 // Vertex Modifiers -------------------------------------------------------------------------------------------------------------------------------------------
 void vertLayer::vertModifiers_Set(void (*mod)(int16_t*,int16_t*),bool (*modEnabled)()){
@@ -595,7 +672,7 @@ void vertLayer::selectVert_All(){
 }
 
 void vertLayer::selectVert_Clear(){
-	memset(selVerts,0,SEL_VERTS_COUNT() * sizeof(unsigned char));
+	memset(selVerts,0,maxTris * TRI_VERT_COUNT * sizeof(unsigned char));
 	selVertCount = 0;
 	
 	modified = true;

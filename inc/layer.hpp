@@ -81,18 +81,15 @@
 			unsigned int selVertCount;
 			
 			// Pseudo-Macros ----------------------
-			unsigned int BUFF_XY_COUNT();
-			unsigned int BUFF_UV_COUNT();
-			unsigned int BUFF_TBC_COUNT();
-			
 			bool NEARVERT_VALID();
 			bool NEARTRI_VALID();
 			
-			unsigned int SEL_VERTS_COUNT();
-			unsigned int SEL_TRIS_COUNT();
-			
 			// Utility methods ---------------------
-			void init(unsigned int maxTriCount);
+			bool readMesh(FILE *in);
+			
+			bool init_ReadLayer(FILE *in);
+			void init_Blank(unsigned int maxTriCount);
+			
 			void end();
 			
 			void copyTri(struct vecTrisBuf *src,unsigned int srcI,struct vecTrisBuf *dest,unsigned int destI);
@@ -106,10 +103,14 @@
 			
 		public:
 			// General Globals ---------------------
-			vertLayer(unsigned int maxTriCount);
+			vertLayer(unsigned int maxTriCount,FILE *in);
 			~vertLayer();
 			
 			enum layerType type();
+			
+			// Output ------------------------
+			bool writeMesh(FILE *out);
+			bool writeLayer(FILE *out);
 			
 			// Vertex Modifiers ------------------
 			void vertModifiers_Set(void (*mod)(int16_t*,int16_t*),bool (*modEnabled)());
