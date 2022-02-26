@@ -37,4 +37,4 @@ Therefore, this hobby project was created.
 ## To-Do
 
 - Implement save/load and export/import features
-- Tidy dependancies
+- Tidy dependencies
