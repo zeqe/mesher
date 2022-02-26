@@ -18,7 +18,7 @@ Though no benchmarks were run, there was concern over the available options.
 Therefore, in an attempt to make the best of both worlds, "smooth triangles" were employed.  
 There are only concave, convex, and full triangles. These then act within the paradigm of a usual 2d triangle mesh, to create an instanceable, responsively-animatable mesh.  
 
-This paradigm was easily implemented as a shader, but no tools existed (that I know of) to creatively interact with meshes that visually harnessed convexity/concavity.  
+This paradigm was easily implemented as a shader, but no tools existed (that I know of) to creatively interact with meshes that visually harnessed convex/concave triangles.  
 Therefore, this hobby project was created.  
 
 ## Use Illustrations
